@@ -79,29 +79,33 @@
   .btn-urgent { background: #c0392b; color: #fff; font-size: 0.75rem; padding: 4px 10px; }
   .btn-urgent:hover { background: #a93226; }
   .btn-urgent.active { background: #922b21; box-shadow: 0 0 0 2px #f1948a; }
-  .btn-complete { background: #e8e0d0; color: #555; font-size: 0.75rem; padding: 4px 10px; }
-  .btn-complete:hover { background: #d4c9b0; }
-  .btn-delete { background: transparent; color: #bbb; font-size: 0.75rem; border: 1px solid #ddd; padding: 4px 10px; }
+  .btn-complete { background: #d4c9b0; color: #333; font-size: 0.75rem; padding: 4px 10px; }
+  .btn-complete:hover { background: #c4b89e; }
+  .btn-delete { background: transparent; color: #888; font-size: 0.75rem; border: 1px solid #bbb; padding: 4px 10px; }
   .btn-delete:hover { background: #fee; color: #c0392b; border-color: #f1948a; }
   .btn-add-contact { background: transparent; color: #8b6914; border: 1px dashed #c8a84b; font-size: 0.78rem; padding: 6px 12px; }
   .btn-add-contact:hover { background: #fdf6e3; }
-  .btn-notes { background: transparent; color: #6b7280; border: 1px solid #e0d8c8; font-size: 0.75rem; padding: 4px 10px; }
-  .btn-notes:hover { background: #f0ead8; }
-  .btn-notes.open { background: #f0ead8; color: #374151; }
+  .btn-notes { background: #e8e4da; color: #444; border: 1px solid #c8bfa8; font-size: 0.75rem; padding: 4px 10px; }
+  .btn-notes:hover { background: #d4c9b0; }
+  .btn-notes.open { background: #d4c9b0; color: #222; }
 
   .btn-move {
-    background: transparent; border: 1px solid #e0d8c8; border-radius: 4px;
-    color: #aaa; cursor: pointer; font-size: 0.7rem; padding: 2px 7px;
+    background: #e8e4da; border: 1px solid #c8bfa8; border-radius: 4px;
+    color: #555; cursor: pointer; font-size: 0.7rem; padding: 2px 7px;
     line-height: 1.4; transition: all 0.12s; font-family: sans-serif;
   }
-  .btn-move:hover { background: #f0ead8; color: #555; }
-  .btn-move:disabled { opacity: 0.2; cursor: default; }
+  .btn-move:hover { background: #d4c9b0; color: #222; }
+  .btn-move:disabled { opacity: 0.25; cursor: default; }
 
   .btn-edit {
-    background: transparent; border: 1px solid #e0d8c8; color: #888;
+    background: #e8e4da; border: 1px solid #c8bfa8; color: #444;
     font-size: 0.72rem; padding: 4px 9px; border-radius: 4px; cursor: pointer;
   }
-  .btn-edit:hover { background: #f0ead8; color: #444; }
+  .btn-edit:hover { background: #d4c9b0; color: #111; }
+
+  /* Highlighted row */
+  .story-card.highlighted { background: #fffbe6; border-color: #f0c040; box-shadow: 0 0 0 2px #f0c04055; }
+  .contact-item.highlighted { background: #fffbe6 !important; border-color: #f0c040; }
 
   .inline-edit-input {
     flex: 1; font-family: 'Georgia', serif; font-size: inherit; font-weight: inherit;
@@ -357,6 +361,7 @@
   // ── Data ──────────────────────────────────────────────────────────────────
   let stories = JSON.parse(localStorage.getItem('storyTracker') || '[]');
   const openNotes = new Set();
+  const highlighted = new Set();
 
   function formatDate(iso) {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -497,6 +502,15 @@
     ta.value = '';
     save(); render();
     openNotes.add(contactId);
+    render();
+  }
+
+  // ── Highlight ─────────────────────────────────────────────────────────────
+  function toggleHighlight(e, id) {
+    // Don't trigger if clicking a button or input
+    if (e.target.closest('button,input,textarea')) return;
+    if (highlighted.has(id)) highlighted.delete(id);
+    else highlighted.add(id);
     render();
   }
 
@@ -692,9 +706,9 @@
 
         return `
           <div class="contact-wrapper" draggable="true" data-contact-id="${c.id}" data-story-id="${s.id}">
-            <div class="contact-item ${notesOpen ? '' : 'no-notes'} ${c.urgent ? 'urgent' : ''} ${c.completed ? 'completed' : ''}">
+            <div class="contact-item ${notesOpen ? '' : 'no-notes'} ${c.urgent ? 'urgent' : ''} ${c.completed ? 'completed' : ''} ${highlighted.has(c.id) ? 'highlighted' : ''}">
               <span class="drag-handle" title="Drag to reorder">⠿</span>
-              <span class="contact-name ${c.completed ? 'crossed' : ''}" data-id="${c.id}">${esc(c.name)}</span>
+              <span class="contact-name ${c.completed ? 'crossed' : ''}" data-id="${c.id}" ondblclick="toggleHighlight(event,'${c.id}')">${esc(c.name)}</span>
               <span class="contact-date">${formatDate(c.date)}</span>
               <div class="contact-actions">
                 <button class="btn-move" onclick="moveContact('${s.id}','${c.id}',-1)" title="Move up">▲</button>
@@ -714,7 +728,7 @@
       }).join('');
 
       return `
-        <div class="story-card ${s.urgent ? 'urgent' : ''} ${s.completed ? 'completed' : ''}" draggable="true" data-story-id="${s.id}">
+        <div class="story-card ${s.urgent ? 'urgent' : ''} ${s.completed ? 'completed' : ''} ${highlighted.has(s.id) ? 'highlighted' : ''}" draggable="true" data-story-id="${s.id}" ondblclick="toggleHighlight(event,'${s.id}')">
           <div class="story-header">
             <span class="drag-handle" title="Drag to reorder">⠿</span>
             ${s.urgent ? '<span class="urgent-badge">URGENT</span>' : ''}
@@ -733,7 +747,7 @@
           </div>
           <div class="contacts-section">
             ${contacts.length ? `<div class="contact-list">${contactsHtml}</div>` : ''}
-            <button class="btn btn-add-contact" onclick="showAddContact('${s.id}')">+ Add contact</button>
+            <button class="btn btn-add-contact" onclick="showAddContact('${s.id}')">+ Add</button>
             <div class="add-contact-form" id="contact-form-${s.id}" style="display:none">
               <input type="text" id="contact-input-${s.id}" placeholder="Contact name…"
                 onkeydown="if(event.key==='Enter') addContact('${s.id}')" />
