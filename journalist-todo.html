@@ -507,7 +507,7 @@
 
   // ── Highlight ─────────────────────────────────────────────────────────────
   function toggleHighlight(e, id) {
-    // Don't trigger if clicking a button or input
+    e.stopPropagation();
     if (e.target.closest('button,input,textarea')) return;
     if (highlighted.has(id)) highlighted.delete(id);
     else highlighted.add(id);
@@ -728,11 +728,11 @@
       }).join('');
 
       return `
-        <div class="story-card ${s.urgent ? 'urgent' : ''} ${s.completed ? 'completed' : ''} ${highlighted.has(s.id) ? 'highlighted' : ''}" draggable="true" data-story-id="${s.id}" ondblclick="toggleHighlight(event,'${s.id}')">
+        <div class="story-card ${s.urgent ? 'urgent' : ''} ${s.completed ? 'completed' : ''} ${highlighted.has(s.id) ? 'highlighted' : ''}" draggable="true" data-story-id="${s.id}">
           <div class="story-header">
             <span class="drag-handle" title="Drag to reorder">⠿</span>
             ${s.urgent ? '<span class="urgent-badge">URGENT</span>' : ''}
-            <span class="story-title ${s.completed ? 'crossed' : ''}" data-id="${s.id}">${esc(s.name)}</span>
+            <span class="story-title ${s.completed ? 'crossed' : ''}" data-id="${s.id}" ondblclick="toggleHighlight(event,'${s.id}')" style="cursor:pointer">${esc(s.name)}</span>
             <span class="story-date">Added ${formatDate(s.date)}</span>
             <div class="story-actions">
               <button class="btn btn-edit" onclick="editStory('${s.id}')">✎ Edit</button>
