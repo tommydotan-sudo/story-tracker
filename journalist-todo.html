@@ -4,170 +4,174 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Story Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'Georgia', serif;
-    background: #f4f1eb;
-    color: #2c2c2c;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #ffffff;
+    color: #1a1a1a;
     min-height: 100vh;
-    padding: 40px 20px;
+    padding: 48px 20px;
+    font-size: 15px;
+    line-height: 1.5;
   }
 
-  h1 { text-align: center; font-size: 2rem; letter-spacing: 0.05em; margin-bottom: 8px; color: #1a1a1a; }
-  .subtitle { text-align: center; color: #888; font-style: italic; margin-bottom: 36px; font-size: 0.9rem; }
-  .container { max-width: 760px; margin: 0 auto; }
+  h1 { text-align: center; font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 4px; color: #111; }
+  .subtitle { text-align: center; color: #9ca3af; margin-bottom: 40px; font-size: 0.875rem; }
+  .container { max-width: 680px; margin: 0 auto; }
 
-  /* Sync status bar */
-  #syncBar {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-bottom: 16px;
-    font-family: sans-serif;
-    font-size: 0.75rem;
-    color: #aaa;
-    min-height: 20px;
-  }
-  #syncDot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #ccc; flex-shrink: 0; transition: background 0.3s;
-  }
+  /* Sync bar */
+  #syncBar { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-bottom: 20px; font-size: 0.75rem; color: #9ca3af; min-height: 18px; }
+  #syncDot { width: 7px; height: 7px; border-radius: 50%; background: #d1d5db; flex-shrink: 0; transition: background 0.3s; }
   #syncDot.saving  { background: #f59e0b; }
   #syncDot.saved   { background: #22c55e; }
   #syncDot.error   { background: #ef4444; }
-  #syncDot.offline { background: #94a3b8; }
 
   /* Setup overlay */
   #setupOverlay {
-    position: fixed; inset: 0; background: rgba(244,241,235,0.97);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 100; padding: 20px;
+    position: fixed; inset: 0; background: rgba(255,255,255,0.97);
+    display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px;
   }
   #setupBox {
-    background: #fff; border: 1px solid #e0d8c8; border-radius: 10px;
-    padding: 36px 40px; max-width: 500px; width: 100%;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 36px 40px; max-width: 500px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.08);
   }
-  #setupBox h2 { font-size: 1.3rem; margin-bottom: 6px; }
-  #setupBox p { font-size: 0.88rem; color: #666; margin-bottom: 24px; line-height: 1.6; }
-  #setupBox label { display: block; font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 4px; font-family: sans-serif; }
+  #setupBox h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 8px; }
+  #setupBox p { font-size: 0.875rem; color: #6b7280; margin-bottom: 24px; line-height: 1.6; }
+  #setupBox label { display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
   #setupBox input {
-    width: 100%; padding: 9px 12px; border: 1px solid #d4c9b0; border-radius: 5px;
+    width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 6px;
     font-size: 0.9rem; font-family: monospace; margin-bottom: 14px; outline: none;
   }
-  #setupBox input:focus { border-color: #8b6914; }
-  #setupBox .setup-hint { font-size: 0.75rem; color: #aaa; margin-top: -10px; margin-bottom: 14px; }
-  #setupError { color: #c0392b; font-size: 0.82rem; margin-bottom: 12px; display: none; }
+  #setupBox input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+  #setupBox .setup-hint { font-size: 0.75rem; color: #9ca3af; margin-top: -10px; margin-bottom: 14px; }
+  #setupError { color: #ef4444; font-size: 0.82rem; margin-bottom: 12px; display: none; }
 
-  .add-story-form { display: flex; gap: 8px; margin-bottom: 28px; }
+  /* Add story */
+  .add-story-form { display: flex; gap: 8px; margin-bottom: 32px; }
   .add-story-form input {
-    flex: 1; padding: 12px 16px; border: 2px solid #d4c9b0; border-radius: 6px;
-    font-size: 1rem; font-family: 'Georgia', serif; background: #fff; outline: none; transition: border-color 0.2s;
+    flex: 1; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 0.9375rem; font-family: 'Inter', sans-serif; background: #fff; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s; color: #111;
   }
-  .add-story-form input:focus { border-color: #8b6914; }
+  .add-story-form input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+  .add-story-form input::placeholder { color: #9ca3af; }
 
+  /* Buttons */
   .btn {
-    padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer;
-    font-size: 0.85rem; font-family: 'Georgia', serif; font-weight: bold;
-    transition: all 0.15s; white-space: nowrap;
+    padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 0.8125rem; font-family: 'Inter', sans-serif; font-weight: 500;
+    transition: all 0.12s; white-space: nowrap; line-height: 1.4;
   }
-  .btn-add { background: #2c5f2e; color: #fff; padding: 12px 22px; font-size: 1rem; }
-  .btn-add:hover { background: #234d25; }
-  .btn-urgent { background: #c0392b; color: #fff; font-size: 0.75rem; padding: 4px 10px; }
-  .btn-urgent:hover { background: #a93226; }
-  .btn-urgent.active { background: #922b21; box-shadow: 0 0 0 2px #f1948a; }
-  .btn-complete { background: #d4c9b0; color: #333; font-size: 0.75rem; padding: 4px 10px; }
-  .btn-complete:hover { background: #c4b89e; }
-  .btn-delete { background: transparent; color: #888; font-size: 0.75rem; border: 1px solid #bbb; padding: 4px 10px; }
-  .btn-delete:hover { background: #fee; color: #c0392b; border-color: #f1948a; }
-  .btn-add-contact { background: transparent; color: #8b6914; border: 1px dashed #c8a84b; font-size: 0.78rem; padding: 6px 12px; }
-  .btn-add-contact:hover { background: #fdf6e3; }
-  .btn-notes { background: #e8e4da; color: #444; border: 1px solid #c8bfa8; font-size: 0.75rem; padding: 4px 10px; }
-  .btn-notes:hover { background: #d4c9b0; }
-  .btn-notes.open { background: #d4c9b0; color: #222; }
-
+  .btn-add { background: #3b82f6; color: #fff; padding: 10px 18px; font-size: 0.9375rem; border-radius: 8px; }
+  .btn-add:hover { background: #2563eb; }
+  .btn-urgent { background: #fee2e2; color: #dc2626; font-size: 0.75rem; padding: 3px 10px; border: 1px solid #fca5a5; }
+  .btn-urgent:hover { background: #fecaca; }
+  .btn-urgent.active { background: #dc2626; color: #fff; border-color: #dc2626; }
+  .btn-complete { background: #f3f4f6; color: #374151; font-size: 0.75rem; padding: 3px 10px; border: 1px solid #d1d5db; }
+  .btn-complete:hover { background: #e5e7eb; }
+  .btn-delete { background: transparent; color: #9ca3af; font-size: 0.75rem; border: 1px solid #e5e7eb; padding: 3px 8px; }
+  .btn-delete:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+  .btn-add-contact { background: transparent; color: #6b7280; border: 1px dashed #d1d5db; font-size: 0.8125rem; padding: 5px 12px; border-radius: 6px; }
+  .btn-add-contact:hover { background: #f9fafb; color: #374151; border-color: #9ca3af; }
+  .btn-notes { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; font-size: 0.75rem; padding: 3px 10px; border-radius: 5px; }
+  .btn-notes:hover { background: #e5e7eb; }
+  .btn-notes.open { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
   .btn-move {
-    background: #e8e4da; border: 1px solid #c8bfa8; border-radius: 4px;
-    color: #555; cursor: pointer; font-size: 0.7rem; padding: 2px 7px;
+    background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px;
+    color: #6b7280; cursor: pointer; font-size: 0.65rem; padding: 2px 6px;
     line-height: 1.4; transition: all 0.12s; font-family: sans-serif;
   }
-  .btn-move:hover { background: #d4c9b0; color: #222; }
+  .btn-move:hover { background: #e5e7eb; color: #111; }
   .btn-move:disabled { opacity: 0.25; cursor: default; }
+  .btn-edit { background: #f3f4f6; border: 1px solid #d1d5db; color: #6b7280; font-size: 0.72rem; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .btn-edit:hover { background: #e5e7eb; color: #111; }
 
-  .btn-edit {
-    background: #e8e4da; border: 1px solid #c8bfa8; color: #444;
-    font-size: 0.72rem; padding: 4px 9px; border-radius: 4px; cursor: pointer;
-  }
-  .btn-edit:hover { background: #d4c9b0; color: #111; }
+  /* Highlighted */
+  .story-card.highlighted { background: #fffbeb; border-color: #fcd34d; box-shadow: 0 0 0 2px #fcd34d55; }
+  .contact-item.highlighted { background: #fffbeb !important; border-color: #fcd34d; }
 
-  /* Highlighted row */
-  .story-card.highlighted { background: #fffbe6; border-color: #f0c040; box-shadow: 0 0 0 2px #f0c04055; }
-  .contact-item.highlighted { background: #fffbe6 !important; border-color: #f0c040; }
-
+  /* Inline edit */
   .inline-edit-input {
-    flex: 1; font-family: 'Georgia', serif; font-size: inherit; font-weight: inherit;
-    border: none; border-bottom: 2px solid #8b6914; background: transparent;
-    outline: none; color: #2c2c2c; padding: 0 2px; min-width: 80px;
+    flex: 1; font-family: 'Inter', sans-serif; font-size: inherit; font-weight: inherit;
+    border: none; border-bottom: 2px solid #3b82f6; background: transparent;
+    outline: none; color: #111; padding: 0 2px; min-width: 80px;
   }
 
-  .drag-handle {
-    color: #ccc; cursor: grab; font-size: 1rem; padding: 0 4px;
-    flex-shrink: 0; user-select: none; line-height: 1;
-  }
+  /* Drag */
+  .drag-handle { color: #d1d5db; cursor: grab; font-size: 0.875rem; padding: 0 3px; flex-shrink: 0; user-select: none; }
   .drag-handle:active { cursor: grabbing; }
+  .story-card.drag-over { outline: 2px dashed #3b82f6; outline-offset: 2px; }
+  .contact-wrapper.drag-over .contact-item { background: #eff6ff; outline: 2px dashed #93c5fd; outline-offset: -2px; }
 
-  .story-card.drag-over { outline: 2px dashed #8b6914; outline-offset: 2px; }
-  .contact-wrapper.drag-over .contact-item { background: #fdf6e3; outline: 2px dashed #c8a84b; outline-offset: -2px; }
-
-  .story-list { display: flex; flex-direction: column; gap: 14px; }
+  /* Story list */
+  .story-list { display: flex; flex-direction: column; gap: 2px; }
   .story-card {
-    background: #fff; border: 1px solid #e0d8c8; border-radius: 8px;
-    overflow: hidden; transition: box-shadow 0.2s, opacity 0.3s;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 0;
+    overflow: hidden; transition: box-shadow 0.15s;
+    border-left: none; border-right: none; border-top: none;
   }
-  .story-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-  .story-card.urgent { border-left: 4px solid #c0392b; }
-  .story-card.completed { opacity: 0.82; }
+  .story-card:first-child { border-top: 1px solid #e5e7eb; }
+  .story-card:hover { background: #fafafa; }
+  .story-card.urgent { border-left: 3px solid #dc2626; }
+  .story-card.completed { opacity: 0.85; }
 
-  .story-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; flex-wrap: wrap; }
-  .story-title { flex: 1; font-size: 1.05rem; font-weight: bold; min-width: 120px; }
-  .story-title.crossed { text-decoration: line-through; color: #888; }
-  .story-date { font-size: 0.75rem; color: #aaa; font-style: italic; white-space: nowrap; }
-  .urgent-badge {
-    background: #c0392b; color: #fff; font-size: 0.68rem; padding: 2px 8px;
-    border-radius: 10px; font-family: sans-serif; letter-spacing: 0.05em; font-weight: bold;
-  }
-  .story-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .story-header { display: flex; align-items: center; gap: 10px; padding: 12px 4px 10px; flex-wrap: wrap; }
+  .story-title { flex: 1; font-size: 0.9375rem; font-weight: 500; min-width: 120px; color: #111; cursor: pointer; }
+  .story-title.crossed { text-decoration: line-through; color: #6b7280; }
+  .story-date { font-size: 0.7rem; color: #9ca3af; white-space: nowrap; }
+  .urgent-badge { background: #dc2626; color: #fff; font-size: 0.65rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; letter-spacing: 0.04em; }
+  .story-actions { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
 
-  .contacts-section { padding: 10px 16px 14px 16px; border-top: 1px solid #f0ead8; }
-  .contacts-label { font-size: 0.72rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; font-family: sans-serif; }
-  .contact-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  /* Contacts */
+  .contacts-section { padding: 2px 0 12px 24px; }
+  .contact-list { display: flex; flex-direction: column; gap: 0; margin-bottom: 8px; }
   .contact-wrapper { display: flex; flex-direction: column; }
   .contact-item {
-    display: flex; align-items: center; gap: 8px; background: #faf8f3;
-    border: 1px solid #ede6d5; border-radius: 5px 5px 0 0; padding: 7px 10px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 8px; background: transparent;
+    border: none; border-bottom: 1px solid #f3f4f6;
+    border-radius: 0; padding: 8px 4px; flex-wrap: wrap;
   }
-  .contact-item.no-notes { border-radius: 5px; }
-  .contact-item.urgent { border-left: 3px solid #c0392b; }
-  .contact-item.completed { opacity: 0.78; }
-  .contact-name { flex: 1; font-size: 0.9rem; min-width: 80px; }
-  .contact-name.crossed { text-decoration: line-through; color: #777; }
-  .contact-date { font-size: 0.7rem; color: #bbb; font-style: italic; white-space: nowrap; }
-  .contact-actions { display: flex; gap: 5px; align-items: center; }
+  .contact-item.no-notes { border-radius: 0; }
+  .contact-item:last-of-type { border-bottom: none; }
+  .contact-item.urgent { border-left: 2px solid #dc2626; padding-left: 6px; }
+  .contact-item.completed { opacity: 0.8; }
+  .contact-name { flex: 1; font-size: 0.875rem; min-width: 80px; color: #374151; }
+  .contact-name.crossed { text-decoration: line-through; color: #9ca3af; }
+  .contact-date { font-size: 0.68rem; color: #9ca3af; white-space: nowrap; }
+  .contact-actions { display: flex; gap: 4px; align-items: center; }
 
-  .notes-panel { background: #fffdf7; border: 1px solid #ede6d5; border-top: none; border-radius: 0 0 5px 5px; padding: 10px 12px; }
+  /* Notes */
+  .notes-panel { background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 6px 6px; padding: 10px 12px; margin-left: 0; }
   .notes-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-  .note-item {
-    display: flex; gap: 8px; align-items: flex-start;
-    background: #fff; border: 1px solid #ede6d5; border-radius: 4px; padding: 7px 10px;
+  .note-item { display: flex; gap: 8px; align-items: flex-start; background: #fff; border: 1px solid #e5e7eb; border-radius: 5px; padding: 8px 10px; }
+  .note-item.drag-over { outline: 2px dashed #93c5fd; outline-offset: -2px; background: #eff6ff; }
+  .note-text { flex: 1; font-size: 0.8375rem; color: #374151; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+  .note-date { font-size: 0.68rem; color: #9ca3af; white-space: nowrap; margin-top: 2px; }
+  .note-delete { background: transparent; border: none; color: #d1d5db; cursor: pointer; font-size: 0.75rem; padding: 0 2px; flex-shrink: 0; }
+  .note-delete:hover { color: #dc2626; }
+  .add-note-form { display: flex; gap: 6px; align-items: flex-start; }
+  .add-note-form textarea {
+    flex: 1; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 5px;
+    font-size: 0.8375rem; font-family: 'Inter', sans-serif; background: #fff;
+    outline: none; resize: vertical; min-height: 34px; max-height: 120px; color: #111;
   }
-  .note-item.drag-over { outline: 2px dashed #c8a84b; outline-offset: -2px; background: #fdf6e3; }
-  .note-text { flex: 1; font-size: 0.85rem; color: #444; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .note-date { font-size: 0.68rem; color: #ccc; font-style: italic; white-space: nowrap; margin-top: 2px; }
-  .note-delete { background: transparent; border: none; color: #ddd; cursor: pointer; font-size: 0.75rem; padding: 0 2px; flex-shrink: 0; }
-  .note-delete:hover { color: #c0392b; }
+  .add-note-form textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+  .btn-add-note { background: #3b82f6; color: #fff; font-size: 0.78rem; padding: 6px 12px; border-radius: 5px; }
+  .btn-add-note:hover { background: #2563eb; }
+
+  /* Add contact form */
+  .add-contact-form { display: flex; gap: 6px; margin-top: 4px; }
+  .add-contact-form input {
+    flex: 1; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px;
+    font-size: 0.875rem; font-family: 'Inter', sans-serif; background: #fff; outline: none; color: #111;
+  }
+  .add-contact-form input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+  .add-contact-form input::placeholder { color: #9ca3af; }
+
+  .empty-state { text-align: center; color: #9ca3af; margin-top: 60px; font-size: 0.9375rem; }
 
   .add-note-form { display: flex; gap: 6px; align-items: flex-start; }
   .add-note-form textarea {
@@ -207,7 +211,7 @@
     <p class="setup-hint">Starts with <code>ghp_</code>. Keep it secret — it's your key to the data.</p>
 
     <div id="setupError"></div>
-    <button class="btn btn-add" style="width:100%" onclick="setupConnect()">Connect &amp; Start →</button>
+    <button class="btn btn-add" style="width:100%;border-radius:8px;padding:11px" onclick="setupConnect()">Connect &amp; Start →</button>
   </div>
 </div>
 
