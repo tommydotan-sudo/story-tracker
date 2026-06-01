@@ -171,37 +171,19 @@
 <div id="setupOverlay">
   <div id="setupBox">
     <h2>Welcome to Story Tracker</h2>
-    <p>To sync your data across devices, you'll need a free Supabase account. This only takes ~2 minutes to set up once.<br><br>
+    <p>Your data syncs via a private <strong>GitHub Gist</strong> — free and nothing to install. You just need a GitHub Personal Access Token.<br><br>
     <strong>Setup steps:</strong><br>
-    1. Go to <strong>supabase.com</strong> → New project<br>
-    2. In the SQL editor, run the SQL shown below<br>
-    3. Go to Project Settings → API and paste your URL + anon key here</p>
+    1. Go to <strong>github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)</strong><br>
+    2. Click <strong>Generate new token (classic)</strong><br>
+    3. Give it any name, tick the <strong>gist</strong> checkbox, click Generate<br>
+    4. Paste the token below</p>
 
-    <label>Supabase Project URL</label>
-    <input id="cfgUrl" type="text" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" />
-
-    <label>Supabase Anon Key</label>
-    <input id="cfgKey" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off" />
-
-    <label>Your passphrase <span style="font-weight:normal;color:#aaa">(any secret word — keeps your data private)</span></label>
-    <input id="cfgPass" type="password" placeholder="e.g. my-secret-phrase" autocomplete="off" />
-    <p class="setup-hint">Use the same passphrase on every device.</p>
+    <label>GitHub Personal Access Token</label>
+    <input id="cfgToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+    <p class="setup-hint">Starts with <code>ghp_</code>. Keep it secret — it's your key to the data.</p>
 
     <div id="setupError"></div>
     <button class="btn btn-add" style="width:100%" onclick="setupConnect()">Connect &amp; Start →</button>
-
-    <details style="margin-top:20px">
-      <summary style="cursor:pointer;font-size:0.8rem;color:#8b6914;font-family:sans-serif">Show required SQL to run in Supabase</summary>
-      <pre style="margin-top:10px;background:#f4f1eb;padding:12px;border-radius:5px;font-size:0.75rem;overflow:auto;line-height:1.5">create table if not exists tracker_data (
-  id text primary key,
-  data jsonb not null default '[]',
-  updated_at timestamptz default now()
-);
-
--- Allow public read/write (data is protected by your passphrase key)
-alter table tracker_data enable row level security;
-create policy "anon all" on tracker_data for all to anon using (true) with check (true);</pre>
-    </details>
   </div>
 </div>
 
@@ -224,46 +206,70 @@ create policy "anon all" on tracker_data for all to anon using (true) with check
 </div>
 
 <script>
-  // ── Config (loaded from localStorage after setup) ─────────────────────────
-  let SUPABASE_URL  = localStorage.getItem('st_url')  || '';
-  let SUPABASE_KEY  = localStorage.getItem('st_key')  || '';
-  let DATA_KEY      = localStorage.getItem('st_pass') || '';
+  // ── Config ────────────────────────────────────────────────────────────────
+  let GH_TOKEN  = localStorage.getItem('st_token') || '';
+  let GIST_ID   = localStorage.getItem('st_gist')  || '';
+  const GIST_FILENAME = 'story-tracker.json';
 
   const overlay = document.getElementById('setupOverlay');
 
-  function isConfigured() { return SUPABASE_URL && SUPABASE_KEY && DATA_KEY; }
+  function isConfigured() { return GH_TOKEN && GIST_ID; }
+
+  function ghHeaders() {
+    return {
+      'Authorization': 'token ' + GH_TOKEN,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    };
+  }
 
   async function setupConnect() {
-    const url  = document.getElementById('cfgUrl').value.trim().replace(/\/$/, '');
-    const key  = document.getElementById('cfgKey').value.trim();
-    const pass = document.getElementById('cfgPass').value.trim();
-    const err  = document.getElementById('setupError');
+    const token = document.getElementById('cfgToken').value.trim();
+    const err   = document.getElementById('setupError');
     err.style.display = 'none';
-
-    if (!url || !key || !pass) { err.textContent = 'Please fill in all three fields.'; err.style.display = 'block'; return; }
+    if (!token) { err.textContent = 'Please paste your GitHub token.'; err.style.display = 'block'; return; }
 
     try {
-      // Test connection — just ping the REST root
-      const testUrl = `${url}/rest/v1/`;
-      console.log('Trying URL:', testUrl);
-      const res = await fetch(testUrl, {
-        headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
+      // Verify token works
+      const userRes = await fetch('https://api.github.com/user', {
+        headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
       });
-      if (!res.ok && res.status !== 400) throw new Error('HTTP ' + res.status + ' — check your URL and key');
+      if (!userRes.ok) throw new Error('Invalid token (HTTP ' + userRes.status + ')');
 
-      localStorage.setItem('st_url',  url);
-      localStorage.setItem('st_key',  key);
-      localStorage.setItem('st_pass', pass);
-      SUPABASE_URL = url; SUPABASE_KEY = key; DATA_KEY = pass;
+      GH_TOKEN = token;
+
+      // Find existing Story Tracker gist or create one
+      const listRes = await fetch('https://api.github.com/gists?per_page=100', { headers: ghHeaders() });
+      const gists = await listRes.json();
+      const existing = gists.find(g => g.files && g.files[GIST_FILENAME]);
+
+      if (existing) {
+        GIST_ID = existing.id;
+      } else {
+        // Create new private gist
+        const createRes = await fetch('https://api.github.com/gists', {
+          method: 'POST', headers: ghHeaders(),
+          body: JSON.stringify({
+            description: 'Story Tracker Data',
+            public: false,
+            files: { [GIST_FILENAME]: { content: JSON.stringify([]) } }
+          })
+        });
+        const newGist = await createRes.json();
+        GIST_ID = newGist.id;
+      }
+
+      localStorage.setItem('st_token', GH_TOKEN);
+      localStorage.setItem('st_gist',  GIST_ID);
       overlay.style.display = 'none';
       await loadFromCloud();
     } catch(e) {
-      err.textContent = 'Connection failed: ' + (e.message || e) + ' (tried: ' + url + ')';
+      err.textContent = 'Connection failed: ' + (e.message || e);
       err.style.display = 'block';
     }
   }
 
-  // ── Supabase sync ─────────────────────────────────────────────────────────
+  // ── GitHub Gist sync ──────────────────────────────────────────────────────
   let saveTimer = null;
   let pendingSave = false;
 
@@ -274,25 +280,15 @@ create policy "anon all" on tracker_data for all to anon using (true) with check
     txt.textContent = msg;
   }
 
-  function sbHeaders() {
-    return {
-      'apikey': SUPABASE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates'
-    };
-  }
-
   async function loadFromCloud() {
     setSyncStatus('saving', 'loading…');
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/tracker_data?id=eq.${encodeURIComponent(DATA_KEY)}&select=data`, {
-        headers: sbHeaders()
-      });
+      const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, { headers: ghHeaders() });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const rows = await res.json();
-      if (rows.length && rows[0].data) {
-        stories = rows[0].data;
+      const gist = await res.json();
+      const content = gist.files[GIST_FILENAME]?.content;
+      if (content) {
+        stories = JSON.parse(content);
         localStorage.setItem('storyTracker', JSON.stringify(stories));
       } else {
         stories = JSON.parse(localStorage.getItem('storyTracker') || '[]');
@@ -308,21 +304,16 @@ create policy "anon all" on tracker_data for all to anon using (true) with check
   }
 
   async function pushToCloud() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/tracker_data`, {
-      method: 'POST',
-      headers: sbHeaders(),
-      body: JSON.stringify({ id: DATA_KEY, data: stories, updated_at: new Date().toISOString() })
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH', headers: ghHeaders(),
+      body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(stories) } } })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
   }
 
   function save() {
-    // Always write to localStorage immediately (instant local backup)
     localStorage.setItem('storyTracker', JSON.stringify(stories));
-
     if (!isConfigured()) return;
-
-    // Debounce cloud saves: wait 800ms of inactivity before pushing
     clearTimeout(saveTimer);
     setSyncStatus('saving', 'saving…');
     pendingSave = true;
@@ -337,12 +328,8 @@ create policy "anon all" on tracker_data for all to anon using (true) with check
     }, 800);
   }
 
-  // Warn before closing if a save is still pending
   window.addEventListener('beforeunload', e => {
-    if (pendingSave) {
-      e.preventDefault();
-      e.returnValue = '';
-    }
+    if (pendingSave) { e.preventDefault(); e.returnValue = ''; }
   });
 
   // ── Data ──────────────────────────────────────────────────────────────────
@@ -668,6 +655,7 @@ create policy "anon all" on tracker_data for all to anon using (true) with check
   } else {
     render();
   }
+
 </script>
 </body>
 </html>
