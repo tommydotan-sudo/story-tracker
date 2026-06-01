@@ -288,10 +288,12 @@
       const gist = await res.json();
       const content = gist.files[GIST_FILENAME]?.content;
       if (content) {
-        stories = JSON.parse(content);
+        const parsed = JSON.parse(content);
+        stories = (parsed && parsed.length > 0) ? parsed : makeSeedStories();
         localStorage.setItem('storyTracker', JSON.stringify(stories));
+        if (!parsed || parsed.length === 0) await pushToCloud();
       } else {
-        stories = JSON.parse(localStorage.getItem('storyTracker') || '[]');
+        stories = makeSeedStories();
         await pushToCloud();
       }
       setSyncStatus('saved', 'all changes saved');
@@ -340,6 +342,36 @@
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
   function uid() { return Math.random().toString(36).slice(2, 10); }
+
+  function makeSeedStories() {
+    const d = '2026-05-31T18:00:00.000Z';
+    function c(name, done) { return { id: uid(), name, date: d, completed: !!done, urgent: false, notes: [] }; }
+    function s(name, contacts) { return { id: uid(), name, date: d, completed: false, urgent: false, contacts }; }
+    return [
+      s('Grok', [
+        c('KB Friend', true), c('SB Connex', true), c('Gladebrook'),
+        c('NY Mag Fomers/Names', true), c('Jared Birchell'), c('Yacc'), c('Robert Hayes'),
+        c('Check with Frankel/xAI', true), c('Parag Agrawal', true), c('Mike Mignano', true),
+      ]),
+      s('Former Twitter people', [c('Nikita Bier'), c('Memo')]),
+      s('Ellison', [
+        c('Check in with Sonia', true), c('Maddie G'), c('Byron Trott/Katie'),
+        c('Sue Siegel +1 (650) 529-5400'), c('Hazelbaker'), c('Dave Urban'),
+        c('Bannon', true), c('Mark Buell', true), c('Don Viera'),
+        c('Rikin/Mike Haro Connect', true), c('OliNuz/Seeking', true), c('Brooke'),
+        c('Dana Cimalucca', true), c('Josef (paul)'), c('Lehane', true),
+        c('Amiit from GCP', true), c('David Geffen'), c('Look up relations to ex wives'),
+        c('Benioff', true), c('Symonds', true), c('Arianna'), c('Somesh Dash', true),
+        c('Melinda Erkelens', true), c('Peter Ragone', true),
+        c('Judith Sims 415 309 9400'), c('Josh Steinman (ask paige)'),
+      ]),
+      s('Newcomer Stories', [
+        c('lightspeed on world models'), c('Rebel Alliance (Nous)'), c('Harness'),
+      ]),
+      s('New Establishment', [c('Alex Wang'), c('Demis Hassabis'), c('Satya')]),
+    ];
+  }
+
   function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
@@ -630,7 +662,6 @@
             </div>
           </div>
           <div class="contacts-section">
-            <div class="contacts-label">Contacts to call</div>
             ${contacts.length ? `<div class="contact-list">${contactsHtml}</div>` : ''}
             <button class="btn btn-add-contact" onclick="showAddContact('${s.id}')">+ Add contact</button>
             <div class="add-contact-form" id="contact-form-${s.id}" style="display:none">
