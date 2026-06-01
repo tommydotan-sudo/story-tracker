@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Story Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: #f4f1eb;
+    color: #2c2c2c;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  h1 { text-align: center; font-size: 2rem; letter-spacing: 0.05em; margin-bottom: 8px; color: #1a1a1a; }
+  .subtitle { text-align: center; color: #888; font-style: italic; margin-bottom: 36px; font-size: 0.9rem; }
+  .container { max-width: 760px; margin: 0 auto; }
+
+  /* Sync status bar */
+  #syncBar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 16px;
+    font-family: sans-serif;
+    font-size: 0.75rem;
+    color: #aaa;
+    min-height: 20px;
+  }
+  #syncDot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #ccc; flex-shrink: 0; transition: background 0.3s;
+  }
+  #syncDot.saving  { background: #f59e0b; }
+  #syncDot.saved   { background: #22c55e; }
+  #syncDot.error   { background: #ef4444; }
+  #syncDot.offline { background: #94a3b8; }
+
+  /* Setup overlay */
+  #setupOverlay {
+    position: fixed; inset: 0; background: rgba(244,241,235,0.97);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  #setupBox {
+    background: #fff; border: 1px solid #e0d8c8; border-radius: 10px;
+    padding: 36px 40px; max-width: 500px; width: 100%;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  }
+  #setupBox h2 { font-size: 1.3rem; margin-bottom: 6px; }
+  #setupBox p { font-size: 0.88rem; color: #666; margin-bottom: 24px; line-height: 1.6; }
+  #setupBox label { display: block; font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 4px; font-family: sans-serif; }
+  #setupBox input {
+    width: 100%; padding: 9px 12px; border: 1px solid #d4c9b0; border-radius: 5px;
+    font-size: 0.9rem; font-family: monospace; margin-bottom: 14px; outline: none;
+  }
+  #setupBox input:focus { border-color: #8b6914; }
+  #setupBox .setup-hint { font-size: 0.75rem; color: #aaa; margin-top: -10px; margin-bottom: 14px; }
+  #setupError { color: #c0392b; font-size: 0.82rem; margin-bottom: 12px; display: none; }
+
+  .add-story-form { display: flex; gap: 8px; margin-bottom: 28px; }
+  .add-story-form input {
+    flex: 1; padding: 12px 16px; border: 2px solid #d4c9b0; border-radius: 6px;
+    font-size: 1rem; font-family: 'Georgia', serif; background: #fff; outline: none; transition: border-color 0.2s;
+  }
+  .add-story-form input:focus { border-color: #8b6914; }
+
+  .btn {
+    padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 0.85rem; font-family: 'Georgia', serif; font-weight: bold;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-add { background: #2c5f2e; color: #fff; padding: 12px 22px; font-size: 1rem; }
+  .btn-add:hover { background: #234d25; }
+  .btn-urgent { background: #c0392b; color: #fff; font-size: 0.75rem; padding: 4px 10px; }
+  .btn-urgent:hover { background: #a93226; }
+  .btn-urgent.active { background: #922b21; box-shadow: 0 0 0 2px #f1948a; }
+  .btn-complete { background: #e8e0d0; color: #555; font-size: 0.75rem; padding: 4px 10px; }
+  .btn-complete:hover { background: #d4c9b0; }
+  .btn-delete { background: transparent; color: #bbb; font-size: 0.75rem; border: 1px solid #ddd; padding: 4px 10px; }
+  .btn-delete:hover { background: #fee; color: #c0392b; border-color: #f1948a; }
+  .btn-add-contact { background: transparent; color: #8b6914; border: 1px dashed #c8a84b; font-size: 0.78rem; padding: 6px 12px; }
+  .btn-add-contact:hover { background: #fdf6e3; }
+  .btn-notes { background: transparent; color: #6b7280; border: 1px solid #e0d8c8; font-size: 0.75rem; padding: 4px 10px; }
+  .btn-notes:hover { background: #f0ead8; }
+  .btn-notes.open { background: #f0ead8; color: #374151; }
+
+  .drag-handle {
+    color: #ccc; cursor: grab; font-size: 1rem; padding: 0 4px;
+    flex-shrink: 0; user-select: none; line-height: 1;
+  }
+  .drag-handle:active { cursor: grabbing; }
+
+  .story-card.drag-over { outline: 2px dashed #8b6914; outline-offset: 2px; }
+  .contact-wrapper.drag-over .contact-item { background: #fdf6e3; outline: 2px dashed #c8a84b; outline-offset: -2px; }
+
+  .story-list { display: flex; flex-direction: column; gap: 14px; }
+  .story-card {
+    background: #fff; border: 1px solid #e0d8c8; border-radius: 8px;
+    overflow: hidden; transition: box-shadow 0.2s, opacity 0.3s;
+  }
+  .story-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .story-card.urgent { border-left: 4px solid #c0392b; }
+  .story-card.completed { opacity: 0.6; }
+
+  .story-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; flex-wrap: wrap; }
+  .story-title { flex: 1; font-size: 1.05rem; font-weight: bold; min-width: 120px; }
+  .story-title.crossed { text-decoration: line-through; color: #aaa; }
+  .story-date { font-size: 0.75rem; color: #aaa; font-style: italic; white-space: nowrap; }
+  .urgent-badge {
+    background: #c0392b; color: #fff; font-size: 0.68rem; padding: 2px 8px;
+    border-radius: 10px; font-family: sans-serif; letter-spacing: 0.05em; font-weight: bold;
+  }
+  .story-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  .contacts-section { padding: 10px 16px 14px 16px; border-top: 1px solid #f0ead8; }
+  .contacts-label { font-size: 0.72rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; font-family: sans-serif; }
+  .contact-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .contact-wrapper { display: flex; flex-direction: column; }
+  .contact-item {
+    display: flex; align-items: center; gap: 8px; background: #faf8f3;
+    border: 1px solid #ede6d5; border-radius: 5px 5px 0 0; padding: 7px 10px; flex-wrap: wrap;
+  }
+  .contact-item.no-notes { border-radius: 5px; }
+  .contact-item.urgent { border-left: 3px solid #c0392b; }
+  .contact-item.completed { opacity: 0.55; }
+  .contact-name { flex: 1; font-size: 0.9rem; min-width: 80px; }
+  .contact-name.crossed { text-decoration: line-through; color: #aaa; }
+  .contact-date { font-size: 0.7rem; color: #bbb; font-style: italic; white-space: nowrap; }
+  .contact-actions { display: flex; gap: 5px; align-items: center; }
+
+  .notes-panel { background: #fffdf7; border: 1px solid #ede6d5; border-top: none; border-radius: 0 0 5px 5px; padding: 10px 12px; }
+  .notes-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .note-item {
+    display: flex; gap: 8px; align-items: flex-start;
+    background: #fff; border: 1px solid #ede6d5; border-radius: 4px; padding: 7px 10px;
+  }
+  .note-item.drag-over { outline: 2px dashed #c8a84b; outline-offset: -2px; background: #fdf6e3; }
+  .note-text { flex: 1; font-size: 0.85rem; color: #444; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .note-date { font-size: 0.68rem; color: #ccc; font-style: italic; white-space: nowrap; margin-top: 2px; }
+  .note-delete { background: transparent; border: none; color: #ddd; cursor: pointer; font-size: 0.75rem; padding: 0 2px; flex-shrink: 0; }
+  .note-delete:hover { color: #c0392b; }
+
+  .add-note-form { display: flex; gap: 6px; align-items: flex-start; }
+  .add-note-form textarea {
+    flex: 1; padding: 6px 10px; border: 1px dashed #c8a84b; border-radius: 4px;
+    font-size: 0.85rem; font-family: 'Georgia', serif; background: #fdf6e3;
+    outline: none; resize: vertical; min-height: 36px; max-height: 120px;
+  }
+  .add-note-form textarea:focus { border-style: solid; border-color: #8b6914; }
+  .btn-add-note { background: #8b6914; color: #fff; font-size: 0.78rem; padding: 6px 12px; }
+  .btn-add-note:hover { background: #74590f; }
+
+  .add-contact-form { display: flex; gap: 6px; margin-top: 4px; }
+  .add-contact-form input {
+    flex: 1; padding: 7px 10px; border: 1px dashed #c8a84b; border-radius: 5px;
+    font-size: 0.88rem; font-family: 'Georgia', serif; background: #fdf6e3; outline: none;
+  }
+  .add-contact-form input:focus { border-style: solid; border-color: #8b6914; }
+
+  .empty-state { text-align: center; color: #bbb; font-style: italic; margin-top: 60px; font-size: 1rem; }
+</style>
+</head>
+<body>
+
+<!-- First-time setup overlay -->
+<div id="setupOverlay">
+  <div id="setupBox">
+    <h2>Welcome to Story Tracker</h2>
+    <p>To sync your data across devices, you'll need a free Supabase account. This only takes ~2 minutes to set up once.<br><br>
+    <strong>Setup steps:</strong><br>
+    1. Go to <strong>supabase.com</strong> → New project<br>
+    2. In the SQL editor, run the SQL shown below<br>
+    3. Go to Project Settings → API and paste your URL + anon key here</p>
+
+    <label>Supabase Project URL</label>
+    <input id="cfgUrl" type="text" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" />
+
+    <label>Supabase Anon Key</label>
+    <input id="cfgKey" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off" />
+
+    <label>Your passphrase <span style="font-weight:normal;color:#aaa">(any secret word — keeps your data private)</span></label>
+    <input id="cfgPass" type="password" placeholder="e.g. my-secret-phrase" autocomplete="off" />
+    <p class="setup-hint">Use the same passphrase on every device.</p>
+
+    <div id="setupError"></div>
+    <button class="btn btn-add" style="width:100%" onclick="setupConnect()">Connect &amp; Start →</button>
+
+    <details style="margin-top:20px">
+      <summary style="cursor:pointer;font-size:0.8rem;color:#8b6914;font-family:sans-serif">Show required SQL to run in Supabase</summary>
+      <pre style="margin-top:10px;background:#f4f1eb;padding:12px;border-radius:5px;font-size:0.75rem;overflow:auto;line-height:1.5">create table if not exists tracker_data (
+  id text primary key,
+  data jsonb not null default '[]',
+  updated_at timestamptz default now()
+);
+
+-- Allow public read/write (data is protected by your passphrase key)
+alter table tracker_data enable row level security;
+create policy "anon all" on tracker_data for all to anon using (true) with check (true);</pre>
+    </details>
+  </div>
+</div>
+
+<div class="container">
+  <h1>Story Tracker</h1>
+  <p class="subtitle">Freelance journalist's work in progress</p>
+
+  <div id="syncBar">
+    <div id="syncDot"></div>
+    <span id="syncMsg">connecting…</span>
+  </div>
+
+  <div class="add-story-form">
+    <input type="text" id="newStoryInput" placeholder="New story name…" />
+    <button class="btn btn-add" onclick="addStory()">+ Add Story</button>
+  </div>
+
+  <div class="story-list" id="storyList"></div>
+  <p class="empty-state" id="emptyState" style="display:none">No stories yet — add one above.</p>
+</div>
+
+<script>
+  // ── Config (loaded from localStorage after setup) ─────────────────────────
+  let SUPABASE_URL  = localStorage.getItem('st_url')  || '';
+  let SUPABASE_KEY  = localStorage.getItem('st_key')  || '';
+  let DATA_KEY      = localStorage.getItem('st_pass') || '';
+
+  const overlay = document.getElementById('setupOverlay');
+
+  function isConfigured() { return SUPABASE_URL && SUPABASE_KEY && DATA_KEY; }
+
+  async function setupConnect() {
+    const url  = document.getElementById('cfgUrl').value.trim().replace(/\/$/, '');
+    const key  = document.getElementById('cfgKey').value.trim();
+    const pass = document.getElementById('cfgPass').value.trim();
+    const err  = document.getElementById('setupError');
+    err.style.display = 'none';
+
+    if (!url || !key || !pass) { err.textContent = 'Please fill in all three fields.'; err.style.display = 'block'; return; }
+
+    try {
+      // Test connection — just ping the REST root
+      const testUrl = `${url}/rest/v1/`;
+      console.log('Trying URL:', testUrl);
+      const res = await fetch(testUrl, {
+        headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
+      });
+      if (!res.ok && res.status !== 400) throw new Error('HTTP ' + res.status + ' — check your URL and key');
+
+      localStorage.setItem('st_url',  url);
+      localStorage.setItem('st_key',  key);
+      localStorage.setItem('st_pass', pass);
+      SUPABASE_URL = url; SUPABASE_KEY = key; DATA_KEY = pass;
+      overlay.style.display = 'none';
+      await loadFromCloud();
+    } catch(e) {
+      err.textContent = 'Connection failed: ' + (e.message || e) + ' (tried: ' + url + ')';
+      err.style.display = 'block';
+    }
+  }
+
+  // ── Supabase sync ─────────────────────────────────────────────────────────
+  let saveTimer = null;
+  let pendingSave = false;
+
+  function setSyncStatus(state, msg) {
+    const dot = document.getElementById('syncDot');
+    const txt = document.getElementById('syncMsg');
+    dot.className = state;
+    txt.textContent = msg;
+  }
+
+  function sbHeaders() {
+    return {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    };
+  }
+
+  async function loadFromCloud() {
+    setSyncStatus('saving', 'loading…');
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/tracker_data?id=eq.${encodeURIComponent(DATA_KEY)}&select=data`, {
+        headers: sbHeaders()
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      if (rows.length && rows[0].data) {
+        stories = rows[0].data;
+        localStorage.setItem('storyTracker', JSON.stringify(stories));
+      } else {
+        stories = JSON.parse(localStorage.getItem('storyTracker') || '[]');
+        await pushToCloud();
+      }
+      setSyncStatus('saved', 'all changes saved');
+      render();
+    } catch(e) {
+      setSyncStatus('error', 'load failed — using local backup');
+      stories = JSON.parse(localStorage.getItem('storyTracker') || '[]');
+      render();
+    }
+  }
+
+  async function pushToCloud() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/tracker_data`, {
+      method: 'POST',
+      headers: sbHeaders(),
+      body: JSON.stringify({ id: DATA_KEY, data: stories, updated_at: new Date().toISOString() })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+  }
+
+  function save() {
+    // Always write to localStorage immediately (instant local backup)
+    localStorage.setItem('storyTracker', JSON.stringify(stories));
+
+    if (!isConfigured()) return;
+
+    // Debounce cloud saves: wait 800ms of inactivity before pushing
+    clearTimeout(saveTimer);
+    setSyncStatus('saving', 'saving…');
+    pendingSave = true;
+    saveTimer = setTimeout(async () => {
+      try {
+        await pushToCloud();
+        pendingSave = false;
+        setSyncStatus('saved', 'all changes saved · ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+      } catch(e) {
+        setSyncStatus('error', 'save failed — changes kept locally');
+      }
+    }, 800);
+  }
+
+  // Warn before closing if a save is still pending
+  window.addEventListener('beforeunload', e => {
+    if (pendingSave) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+  let stories = JSON.parse(localStorage.getItem('storyTracker') || '[]');
+  const openNotes = new Set();
+
+  function formatDate(iso) {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function uid() { return Math.random().toString(36).slice(2, 10); }
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Story ops ─────────────────────────────────────────────────────────────
+  function addStory() {
+    const input = document.getElementById('newStoryInput');
+    const name = input.value.trim();
+    if (!name) return;
+    stories.unshift({ id: uid(), name, date: new Date().toISOString(), completed: false, urgent: false, contacts: [] });
+    input.value = '';
+    save(); render();
+  }
+
+  function toggleUrgentStory(id) {
+    const s = stories.find(s => s.id === id);
+    s.urgent = !s.urgent;
+    if (s.urgent && !s.completed) stories = [s, ...stories.filter(x => x.id !== id)];
+    save(); render();
+  }
+
+  function completeStory(id) {
+    const s = stories.find(s => s.id === id);
+    s.completed = !s.completed;
+    if (s.completed) {
+      s.urgent = false;
+      stories = [...stories.filter(x => x.id !== id && !x.completed),
+                 ...stories.filter(x => x.id !== id && x.completed), s];
+    } else {
+      stories = [s, ...stories.filter(x => x.id !== id)];
+    }
+    save(); render();
+  }
+
+  function deleteStory(id) {
+    if (!confirm('Delete this story entirely?')) return;
+    stories = stories.filter(s => s.id !== id);
+    save(); render();
+  }
+
+  // ── Contact ops ───────────────────────────────────────────────────────────
+  function showAddContact(storyId) {
+    const form = document.getElementById('contact-form-' + storyId);
+    form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+    if (form.style.display === 'flex') form.querySelector('input').focus();
+  }
+
+  function addContact(storyId) {
+    const input = document.getElementById('contact-input-' + storyId);
+    const name = input.value.trim();
+    if (!name) return;
+    const s = stories.find(s => s.id === storyId);
+    s.contacts.unshift({ id: uid(), name, date: new Date().toISOString(), completed: false, urgent: false, notes: [] });
+    input.value = '';
+    save(); render();
+  }
+
+  function toggleUrgentContact(storyId, contactId) {
+    const s = stories.find(s => s.id === storyId);
+    const c = s.contacts.find(c => c.id === contactId);
+    c.urgent = !c.urgent;
+    if (c.urgent && !c.completed) s.contacts = [c, ...s.contacts.filter(x => x.id !== contactId)];
+    save(); render();
+  }
+
+  function completeContact(storyId, contactId) {
+    const s = stories.find(s => s.id === storyId);
+    const c = s.contacts.find(c => c.id === contactId);
+    c.completed = !c.completed;
+    if (c.completed) {
+      c.urgent = false;
+      s.contacts = [...s.contacts.filter(x => x.id !== contactId && !x.completed),
+                    ...s.contacts.filter(x => x.id !== contactId && x.completed), c];
+    } else {
+      s.contacts = [c, ...s.contacts.filter(x => x.id !== contactId)];
+    }
+    save(); render();
+  }
+
+  function deleteContact(storyId, contactId) {
+    if (!confirm('Delete this contact?')) return;
+    const s = stories.find(s => s.id === storyId);
+    s.contacts = s.contacts.filter(c => c.id !== contactId);
+    openNotes.delete(contactId);
+    save(); render();
+  }
+
+  // ── Notes ops ─────────────────────────────────────────────────────────────
+  function toggleNotes(contactId) {
+    if (openNotes.has(contactId)) openNotes.delete(contactId);
+    else openNotes.add(contactId);
+    render();
+  }
+
+  function addNote(storyId, contactId) {
+    const ta = document.getElementById('note-input-' + contactId);
+    const text = ta.value.trim();
+    if (!text) return;
+    const s = stories.find(s => s.id === storyId);
+    const c = s.contacts.find(c => c.id === contactId);
+    if (!c.notes) c.notes = [];
+    c.notes.push({ id: uid(), text, date: new Date().toISOString() });
+    ta.value = '';
+    save(); render();
+    openNotes.add(contactId);
+    render();
+  }
+
+  function deleteNote(storyId, contactId, noteId) {
+    const s = stories.find(s => s.id === storyId);
+    const c = s.contacts.find(c => c.id === contactId);
+    c.notes = (c.notes || []).filter(n => n.id !== noteId);
+    save(); render();
+  }
+
+  // ── Drag & drop ───────────────────────────────────────────────────────────
+  let dragSrc = null;
+
+  function attachDrag() {
+    document.querySelectorAll('.story-card[data-story-id]').forEach(card => {
+      card.addEventListener('dragstart', e => {
+        dragSrc = { type: 'story', storyId: card.dataset.storyId };
+        e.dataTransfer.effectAllowed = 'move';
+        card.style.opacity = '0.5';
+      });
+      card.addEventListener('dragend', () => {
+        card.style.opacity = '';
+        document.querySelectorAll('.story-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+      });
+      card.addEventListener('dragover', e => {
+        if (!dragSrc || dragSrc.type !== 'story') return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        document.querySelectorAll('.story-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+        if (card.dataset.storyId !== dragSrc.storyId) card.classList.add('drag-over');
+      });
+      card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+      card.addEventListener('drop', e => {
+        e.preventDefault(); e.stopPropagation();
+        card.classList.remove('drag-over');
+        if (!dragSrc || dragSrc.type !== 'story') return;
+        const fromIdx = stories.findIndex(s => s.id === dragSrc.storyId);
+        const toIdx   = stories.findIndex(s => s.id === card.dataset.storyId);
+        if (fromIdx === toIdx) return;
+        const [item] = stories.splice(fromIdx, 1);
+        stories.splice(toIdx, 0, item);
+        dragSrc = null; save(); render();
+      });
+    });
+
+    document.querySelectorAll('.note-item[data-note-id]').forEach(item => {
+      item.addEventListener('dragstart', e => {
+        e.stopPropagation();
+        dragSrc = { type: 'note', storyId: item.dataset.storyId, contactId: item.dataset.contactId, noteId: item.dataset.noteId };
+        e.dataTransfer.effectAllowed = 'move';
+        item.style.opacity = '0.5';
+      });
+      item.addEventListener('dragend', () => {
+        item.style.opacity = '';
+        document.querySelectorAll('.note-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+      });
+      item.addEventListener('dragover', e => {
+        if (!dragSrc || dragSrc.type !== 'note' || item.dataset.contactId !== dragSrc.contactId) return;
+        e.preventDefault(); e.stopPropagation();
+        document.querySelectorAll('.note-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+        if (item.dataset.noteId !== dragSrc.noteId) item.classList.add('drag-over');
+      });
+      item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+      item.addEventListener('drop', e => {
+        e.preventDefault(); e.stopPropagation();
+        item.classList.remove('drag-over');
+        if (!dragSrc || dragSrc.type !== 'note') return;
+        const s = stories.find(s => s.id === dragSrc.storyId);
+        const c = s && s.contacts.find(c => c.id === dragSrc.contactId);
+        if (!c) return;
+        const fromIdx = c.notes.findIndex(n => n.id === dragSrc.noteId);
+        const toIdx   = c.notes.findIndex(n => n.id === item.dataset.noteId);
+        if (fromIdx === toIdx) return;
+        const [note] = c.notes.splice(fromIdx, 1);
+        c.notes.splice(toIdx, 0, note);
+        dragSrc = null; save(); render();
+      });
+    });
+
+    document.querySelectorAll('.contact-wrapper[data-contact-id]').forEach(wrapper => {
+      wrapper.addEventListener('dragstart', e => {
+        e.stopPropagation();
+        dragSrc = { type: 'contact', storyId: wrapper.dataset.storyId, contactId: wrapper.dataset.contactId };
+        e.dataTransfer.effectAllowed = 'move';
+        wrapper.style.opacity = '0.5';
+      });
+      wrapper.addEventListener('dragend', () => {
+        wrapper.style.opacity = '';
+        document.querySelectorAll('.contact-wrapper.drag-over').forEach(el => el.classList.remove('drag-over'));
+      });
+      wrapper.addEventListener('dragover', e => {
+        if (!dragSrc || dragSrc.type !== 'contact' || wrapper.dataset.storyId !== dragSrc.storyId) return;
+        e.preventDefault(); e.stopPropagation();
+        document.querySelectorAll('.contact-wrapper.drag-over').forEach(el => el.classList.remove('drag-over'));
+        if (wrapper.dataset.contactId !== dragSrc.contactId) wrapper.classList.add('drag-over');
+      });
+      wrapper.addEventListener('dragleave', () => wrapper.classList.remove('drag-over'));
+      wrapper.addEventListener('drop', e => {
+        e.preventDefault(); e.stopPropagation();
+        wrapper.classList.remove('drag-over');
+        if (!dragSrc || dragSrc.type !== 'contact') return;
+        const s = stories.find(s => s.id === dragSrc.storyId);
+        if (!s) return;
+        const fromIdx = s.contacts.findIndex(c => c.id === dragSrc.contactId);
+        const toIdx   = s.contacts.findIndex(c => c.id === wrapper.dataset.contactId);
+        if (fromIdx === toIdx) return;
+        const [item] = s.contacts.splice(fromIdx, 1);
+        s.contacts.splice(toIdx, 0, item);
+        dragSrc = null; save(); render();
+      });
+    });
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function render() {
+    const list = document.getElementById('storyList');
+    document.getElementById('emptyState').style.display = stories.length === 0 ? 'block' : 'none';
+
+    list.innerHTML = stories.map(s => {
+      const contacts = s.contacts || [];
+
+      const contactsHtml = contacts.map(c => {
+        const notes = c.notes || [];
+        const notesOpen = openNotes.has(c.id);
+
+        const notesPanel = notesOpen ? `
+          <div class="notes-panel">
+            ${notes.length ? `<div class="notes-list">${notes.map(n => `
+              <div class="note-item" draggable="true" data-note-id="${n.id}" data-contact-id="${c.id}" data-story-id="${s.id}">
+                <span class="drag-handle" style="font-size:0.85rem;margin-top:2px" title="Drag to reorder">⠿</span>
+                <div style="flex:1">
+                  <div class="note-text">${esc(n.text)}</div>
+                  <div class="note-date">${formatDate(n.date)}</div>
+                </div>
+                <button class="note-delete" onclick="deleteNote('${s.id}','${c.id}','${n.id}')" title="Delete note">✕</button>
+              </div>`).join('')}
+            </div>` : '<div style="font-size:0.8rem;color:#bbb;font-style:italic;margin-bottom:8px">No notes yet.</div>'}
+            <div class="add-note-form">
+              <textarea id="note-input-${c.id}" placeholder="Add a note…"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addNote('${s.id}','${c.id}')}"></textarea>
+              <button class="btn btn-add-note" onclick="addNote('${s.id}','${c.id}')">Add</button>
+            </div>
+          </div>` : '';
+
+        return `
+          <div class="contact-wrapper" draggable="true" data-contact-id="${c.id}" data-story-id="${s.id}">
+            <div class="contact-item ${notesOpen ? '' : 'no-notes'} ${c.urgent ? 'urgent' : ''} ${c.completed ? 'completed' : ''}">
+              <span class="drag-handle" title="Drag to reorder">⠿</span>
+              <span class="contact-name ${c.completed ? 'crossed' : ''}">${esc(c.name)}</span>
+              <span class="contact-date">${formatDate(c.date)}</span>
+              <div class="contact-actions">
+                <button class="btn btn-notes ${notesOpen ? 'open' : ''}" onclick="toggleNotes('${c.id}')">
+                  Notes${notes.length ? ' (' + notes.length + ')' : ''}
+                </button>
+                <button class="btn btn-urgent ${c.urgent ? 'active' : ''}" onclick="toggleUrgentContact('${s.id}','${c.id}')">
+                  ${c.urgent ? '▼ Urgent' : '▲ Urgent'}
+                </button>
+                <button class="btn btn-complete" onclick="completeContact('${s.id}','${c.id}')">
+                  ${c.completed ? 'Restore' : '✓'}
+                </button>
+                <button class="btn btn-delete" onclick="deleteContact('${s.id}','${c.id}')">✕</button>
+              </div>
+            </div>
+            ${notesPanel}
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="story-card ${s.urgent ? 'urgent' : ''} ${s.completed ? 'completed' : ''}" draggable="true" data-story-id="${s.id}">
+          <div class="story-header">
+            <span class="drag-handle" title="Drag to reorder">⠿</span>
+            ${s.urgent ? '<span class="urgent-badge">URGENT</span>' : ''}
+            <span class="story-title ${s.completed ? 'crossed' : ''}">${esc(s.name)}</span>
+            <span class="story-date">Added ${formatDate(s.date)}</span>
+            <div class="story-actions">
+              <button class="btn btn-urgent ${s.urgent ? 'active' : ''}" onclick="toggleUrgentStory('${s.id}')">
+                ${s.urgent ? '▼ Urgent' : '▲ Urgent'}
+              </button>
+              <button class="btn btn-complete" onclick="completeStory('${s.id}')">
+                ${s.completed ? 'Restore' : '✓ Done'}
+              </button>
+              <button class="btn btn-delete" onclick="deleteStory('${s.id}')">✕</button>
+            </div>
+          </div>
+          <div class="contacts-section">
+            <div class="contacts-label">Contacts to call</div>
+            ${contacts.length ? `<div class="contact-list">${contactsHtml}</div>` : ''}
+            <button class="btn btn-add-contact" onclick="showAddContact('${s.id}')">+ Add contact</button>
+            <div class="add-contact-form" id="contact-form-${s.id}" style="display:none">
+              <input type="text" id="contact-input-${s.id}" placeholder="Contact name…"
+                onkeydown="if(event.key==='Enter') addContact('${s.id}')" />
+              <button class="btn btn-add" style="padding:7px 14px;font-size:0.85rem" onclick="addContact('${s.id}')">Add</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    attachDrag();
+  }
+
+  document.getElementById('newStoryInput')
+    .addEventListener('keydown', e => { if (e.key === 'Enter') addStory(); });
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  if (isConfigured()) {
+    overlay.style.display = 'none';
+    loadFromCloud();
+  } else {
+    render();
+  }
+</script>
+</body>
+</html>
