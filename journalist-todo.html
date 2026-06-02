@@ -281,6 +281,10 @@
 
     <div id="setupError"></div>
     <button class="btn btn-add" style="width:100%;border-radius:8px;padding:11px" onclick="setupConnect()">Connect &amp; Start →</button>
+    <div style="text-align:center;margin-top:16px">
+      <button onclick="skipSetup()" style="background:none;border:none;color:#aaa;font-size:0.8rem;font-family:'Inter',sans-serif;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Try without syncing</button>
+      <p style="font-size:0.72rem;color:#ccc;margin-top:4px;">Data stays in this browser only — nothing is saved to the cloud.</p>
+    </div>
   </div>
 </div>
 
@@ -894,6 +898,13 @@
 
   document.getElementById('newStoryInput')
     .addEventListener('keydown', e => { if (e.key === 'Enter') addStory(); });
+
+  function skipSetup() {
+    overlay.style.display = 'none';
+    setSyncStatus('offline', 'local only — changes not synced');
+    stories = JSON.parse(localStorage.getItem('storyTracker') || '[]');
+    render();
+  }
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   if (isConfigured()) {
