@@ -203,6 +203,45 @@
 
   .empty-state { text-align: center; color: #bbb; margin-top: 60px; font-size: 0.9rem; letter-spacing: 0.02em; }
 
+  /* Urgencies panel */
+  .urgencies-section {
+    margin-bottom: 32px;
+    border: 1px solid #e2e2e2;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.055);
+    overflow: hidden;
+  }
+  .urgencies-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 18px;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafaf8;
+  }
+  .urgencies-title {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #888;
+  }
+  .urgencies-count {
+    background: #e8c84a; color: #7a5f00;
+    font-size: 0.65rem; font-weight: 700;
+    padding: 1px 7px; border-radius: 10px;
+    letter-spacing: 0.04em;
+  }
+  .urgency-list { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+  .urgency-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px;
+    background: #fffdf0;
+    border: 1px solid #e8c84a;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+  .urgency-name { flex: 1; font-weight: 500; color: #1c1c1c; }
+  .urgency-story { font-size: 0.72rem; color: #aaa; letter-spacing: 0.01em; white-space: nowrap; }
+  .urgency-unhighlight { background: transparent; border: none; color: #ccc; cursor: pointer; font-size: 0.75rem; padding: 0 2px; flex-shrink: 0; }
+  .urgency-unhighlight:hover { color: #c0392b; }
+
   .add-note-form { display: flex; gap: 6px; align-items: flex-start; }
   .add-note-form textarea {
     flex: 1; padding: 6px 10px; border: 1px dashed #c8a84b; border-radius: 4px;
@@ -261,6 +300,7 @@
     <button class="btn btn-add" onclick="addStory()">+ Add Story</button>
   </div>
 
+  <div id="urgenciesSection"></div>
   <div class="story-list" id="storyList"></div>
   <p class="empty-state" id="emptyState" style="display:none">No stories yet — add one above.</p>
 </div>
@@ -736,6 +776,34 @@
   function render() {
     const list = document.getElementById('storyList');
     document.getElementById('emptyState').style.display = stories.length === 0 ? 'block' : 'none';
+
+    // Urgencies panel — all highlighted contacts
+    const urgencyItems = [];
+    stories.forEach(s => {
+      (s.contacts || []).forEach(c => {
+        if (highlighted.has(c.id)) urgencyItems.push({ c, s });
+      });
+    });
+    const urgSec = document.getElementById('urgenciesSection');
+    if (urgencyItems.length) {
+      urgSec.innerHTML = `
+        <div class="urgencies-section">
+          <div class="urgencies-header">
+            <span class="urgencies-title">Urgencies</span>
+            <span class="urgencies-count">${urgencyItems.length}</span>
+          </div>
+          <div class="urgency-list">
+            ${urgencyItems.map(({c, s}) => `
+              <div class="urgency-item">
+                <span class="urgency-name">${esc(c.name)}</span>
+                <span class="urgency-story">${esc(s.name)}</span>
+                <button class="urgency-unhighlight" onclick="highlighted.delete('${c.id}');render()" title="Remove">✕</button>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    } else {
+      urgSec.innerHTML = '';
+    }
 
     list.innerHTML = stories.map(s => {
       const contacts = s.contacts || [];
