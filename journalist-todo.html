@@ -174,7 +174,8 @@
   .notes-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
   .note-item { display: flex; gap: 8px; align-items: flex-start; background: #fff; border: 1px solid #e8e8e8; border-radius: 3px; padding: 8px 10px; }
   .note-item.drag-over { outline: 1px dashed #aaa; outline-offset: -1px; background: #f5f5f5; }
-  .note-text { flex: 1; font-size: 0.8375rem; color: #444; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .note-item.highlighted { background: #fffdf0 !important; border-color: #e8c84a !important; }
+  .note-text { flex: 1; font-size: 0.8375rem; color: #444; line-height: 1.6; white-space: pre-wrap; word-break: break-word; cursor: default; }
   .note-date { font-size: 0.67rem; color: #bbb; white-space: nowrap; margin-top: 2px; letter-spacing: 0.02em; }
   .note-delete { background: transparent; border: none; color: #ccc; cursor: pointer; font-size: 0.75rem; padding: 0 2px; flex-shrink: 0; }
   .note-delete:hover { color: #c0392b; }
@@ -605,6 +606,29 @@
     save(); render();
   }
 
+  function editNote(storyId, contactId, noteId) {
+    const s = stories.find(s => s.id === storyId);
+    const c = s.contacts.find(c => c.id === contactId);
+    const n = c.notes.find(n => n.id === noteId);
+    const div = document.querySelector(`.note-text[data-id="${noteId}"]`);
+    if (!div) return;
+    const ta = document.createElement('textarea');
+    ta.value = n.text;
+    ta.style.cssText = 'flex:1;font-family:Inter,sans-serif;font-size:0.8375rem;border:none;border-bottom:1.5px solid #1c1c1c;background:transparent;outline:none;color:#1c1c1c;padding:0 2px;resize:none;width:100%;line-height:1.6;';
+    ta.rows = Math.max(2, n.text.split('\n').length);
+    div.replaceWith(ta);
+    ta.focus(); ta.select();
+    function commit() {
+      const v = ta.value.trim();
+      if (v) n.text = v;
+      save(); render();
+      openNotes.add(contactId);
+      render();
+    }
+    ta.addEventListener('blur', commit);
+    ta.addEventListener('keydown', e => { if (e.key === 'Escape') { render(); openNotes.add(contactId); render(); } });
+  }
+
   // ── Drag & drop ───────────────────────────────────────────────────────────
   let dragSrc = null;
 
@@ -723,12 +747,13 @@
         const notesPanel = notesOpen ? `
           <div class="notes-panel">
             ${notes.length ? `<div class="notes-list">${notes.map(n => `
-              <div class="note-item" draggable="true" data-note-id="${n.id}" data-contact-id="${c.id}" data-story-id="${s.id}">
+              <div class="note-item ${highlighted.has(n.id) ? 'highlighted' : ''}" draggable="true" data-note-id="${n.id}" data-contact-id="${c.id}" data-story-id="${s.id}" ondblclick="toggleHighlight(event,'${n.id}')">
                 <span class="drag-handle" style="font-size:0.85rem;margin-top:2px" title="Drag to reorder">⠿</span>
                 <div style="flex:1">
-                  <div class="note-text">${esc(n.text)}</div>
+                  <div class="note-text" data-id="${n.id}">${esc(n.text)}</div>
                   <div class="note-date">${formatDate(n.date)}</div>
                 </div>
+                <button class="btn-edit" style="font-size:0.7rem;padding:2px 7px;margin-top:1px;flex-shrink:0" onclick="editNote('${s.id}','${c.id}','${n.id}')">Edit</button>
                 <button class="note-delete" onclick="deleteNote('${s.id}','${c.id}','${n.id}')" title="Delete note">✕</button>
               </div>`).join('')}
             </div>` : '<div style="font-size:0.8rem;color:#bbb;font-style:italic;margin-bottom:8px">No notes yet.</div>'}
