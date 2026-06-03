@@ -203,6 +203,22 @@
 
   .empty-state { text-align: center; color: #bbb; margin-top: 60px; font-size: 0.9rem; letter-spacing: 0.02em; }
 
+  /* Search */
+  .search-wrap { position: relative; margin-bottom: 20px; }
+  .search-input {
+    width: 100%; padding: 9px 14px 9px 36px;
+    border: 1px solid #d0d0d0; border-radius: 4px;
+    font-size: 0.9rem; font-family: 'Inter', sans-serif;
+    background: #fff; outline: none; color: #1c1c1c;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: #1c1c1c; }
+  .search-input::placeholder { color: #bbb; }
+  .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #bbb; font-size: 0.9rem; pointer-events: none; }
+  .search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #bbb; cursor: pointer; font-size: 0.8rem; padding: 2px 4px; }
+  .search-clear:hover { color: #555; }
+  .search-highlight { background: #fff3cd; border-radius: 2px; padding: 0 1px; }
+
   /* Date button */
   .date-btn-wrap { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; }
   .date-btn {
@@ -309,12 +325,17 @@
 <div class="container">
   <div class="masthead">
     <h1>Story Tracker</h1>
-    <p class="subtitle">Freelance Journalist</p>
   </div>
 
   <div id="syncBar">
     <div id="syncDot"></div>
     <span id="syncMsg">connecting…</span>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-input" id="searchInput" placeholder="Search stories, contacts, notes…" oninput="searchQuery=this.value.trim();render()" />
+    <button class="search-clear" id="searchClear" style="display:none" onclick="document.getElementById('searchInput').value='';searchQuery='';render()">✕</button>
   </div>
 
   <div class="add-story-form">
@@ -460,6 +481,7 @@
   let stories = JSON.parse(localStorage.getItem('storyTracker') || '[]');
   const openNotes = new Set();
   const highlighted = new Set();
+  let searchQuery = '';
 
   function formatDate(iso) {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -830,15 +852,40 @@
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+  function hilite(text) {
+    if (!searchQuery) return esc(text);
+    const re = new RegExp('(' + searchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+    return esc(text).replace(re, '<mark class="search-highlight">$1</mark>');
+  }
+
+  function matchesSearch(s) {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    if (s.name.toLowerCase().includes(q)) return true;
+    return (s.contacts || []).some(c =>
+      c.name.toLowerCase().includes(q) ||
+      (c.notes || []).some(n => n.text.toLowerCase().includes(q))
+    );
+  }
+
   function render() {
     const list = document.getElementById('storyList');
-    document.getElementById('emptyState').style.display = stories.length === 0 ? 'block' : 'none';
 
-    // Urgencies panel — all highlighted contacts
+    // Search clear button visibility
+    const clearBtn = document.getElementById('searchClear');
+    if (clearBtn) clearBtn.style.display = searchQuery ? 'block' : 'none';
+
+    const visibleStories = searchQuery ? stories.filter(matchesSearch) : stories;
+    document.getElementById('emptyState').style.display = visibleStories.length === 0 && !searchQuery ? 'block' : 'none';
+
+    // Urgencies panel — highlighted contacts and notes
     const urgencyItems = [];
     stories.forEach(s => {
       (s.contacts || []).forEach(c => {
-        if (highlighted.has(c.id)) urgencyItems.push({ c, s });
+        if (highlighted.has(c.id)) urgencyItems.push({ type: 'contact', label: c.name, sublabel: s.name, id: c.id });
+        (c.notes || []).forEach(n => {
+          if (highlighted.has(n.id)) urgencyItems.push({ type: 'note', label: n.text.length > 60 ? n.text.slice(0, 60) + '…' : n.text, sublabel: c.name + ' · ' + s.name, id: n.id });
+        });
       });
     });
     const urgSec = document.getElementById('urgenciesSection');
@@ -850,11 +897,12 @@
             <span class="urgencies-count">${urgencyItems.length}</span>
           </div>
           <div class="urgency-list">
-            ${urgencyItems.map(({c, s}) => `
+            ${urgencyItems.map(u => `
               <div class="urgency-item">
-                <span class="urgency-name">${esc(c.name)}</span>
-                <span class="urgency-story">${esc(s.name)}</span>
-                <button class="urgency-unhighlight" onclick="highlighted.delete('${c.id}');render()" title="Remove">✕</button>
+                ${u.type === 'note' ? '<span style="font-size:0.65rem;color:#aaa;margin-right:4px;flex-shrink:0">NOTE</span>' : ''}
+                <span class="urgency-name">${esc(u.label)}</span>
+                <span class="urgency-story">${esc(u.sublabel)}</span>
+                <button class="urgency-unhighlight" onclick="highlighted.delete('${u.id}');render()" title="Remove">✕</button>
               </div>`).join('')}
           </div>
         </div>`;
@@ -862,7 +910,7 @@
       urgSec.innerHTML = '';
     }
 
-    list.innerHTML = stories.map(s => {
+    list.innerHTML = visibleStories.map(s => {
       const contacts = s.contacts || [];
 
       const contactsHtml = contacts.map(c => {
@@ -875,7 +923,7 @@
               <div class="note-item ${highlighted.has(n.id) ? 'highlighted' : ''}" draggable="true" data-note-id="${n.id}" data-contact-id="${c.id}" data-story-id="${s.id}" ondblclick="toggleHighlight(event,'${n.id}')">
                 <span class="drag-handle" style="font-size:0.85rem;margin-top:2px" title="Drag to reorder">⠿</span>
                 <div style="flex:1">
-                  <div class="note-text" data-id="${n.id}">${esc(n.text)}</div>
+                  <div class="note-text" data-id="${n.id}">${hilite(n.text)}</div>
                   <div class="note-date">${formatDate(n.date)}</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
@@ -896,7 +944,7 @@
           <div class="contact-wrapper" draggable="true" data-contact-id="${c.id}" data-story-id="${s.id}">
             <div class="contact-item ${notesOpen ? '' : 'no-notes'} ${c.urgent ? 'urgent' : ''} ${c.completed ? 'completed' : ''} ${highlighted.has(c.id) ? 'highlighted' : ''}">
               <span class="drag-handle" title="Drag to reorder">⠿</span>
-              <span class="contact-name ${c.completed ? 'crossed' : ''}" data-id="${c.id}" ondblclick="toggleHighlight(event,'${c.id}')">${esc(c.name)}</span>
+              <span class="contact-name ${c.completed ? 'crossed' : ''}" data-id="${c.id}" ondblclick="toggleHighlight(event,'${c.id}')">${hilite(c.name)}</span>
               <span class="contact-date">${formatDate(c.date)}</span>
               <div class="contact-actions">
                 ${dateBtn(c.dateContacted||'', 'Contacted', `setContactDateContacted('${s.id}','${c.id}',this.value)`, c.id)}
@@ -923,7 +971,7 @@
               <span class="drag-handle" title="Drag to reorder">⠿</span>
               <div class="story-title-group">
                 ${s.urgent ? '<span class="urgent-badge">URGENT</span>' : ''}
-                <span class="story-title ${s.completed ? 'crossed' : ''}" data-id="${s.id}" ondblclick="toggleHighlight(event,'${s.id}')">${esc(s.name)}</span>
+                <span class="story-title ${s.completed ? 'crossed' : ''}" data-id="${s.id}" ondblclick="toggleHighlight(event,'${s.id}')">${hilite(s.name)}</span>
               </div>
               <span class="story-date">Added ${formatDate(s.date)}</span>
             </div>
