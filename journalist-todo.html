@@ -157,14 +157,14 @@
     background: #fafafa;
     border: 1px solid #e8e8e8;
     border-radius: 4px;
-    padding: 7px 10px; flex-wrap: nowrap;
+    padding: 7px 10px; flex-wrap: wrap;
     transition: background 0.1s;
   }
   .contact-item:hover { background: #f5f5f5; }
   .contact-item.no-notes { border-radius: 4px; }
   .contact-item.urgent { border-left: 2px solid #c0392b; }
   .contact-item.completed { opacity: 0.78; }
-  .contact-name { flex: 1; font-size: 0.875rem; min-width: 0; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .contact-name { font-size: 0.875rem; color: #333; }
   .contact-name.crossed { text-decoration: line-through; color: #aaa; }
   .contact-date { display: none; }
   .contact-actions { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
@@ -294,6 +294,53 @@
   .add-contact-form input:focus { border-style: solid; border-color: #8b6914; }
 
   .empty-state { text-align: center; color: #bbb; font-style: italic; margin-top: 60px; font-size: 1rem; }
+
+  /* Story outlet / editor */
+  .story-meta { font-size: 0.74rem; padding: 1px 0 3px 24px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .story-meta-display { cursor: pointer; }
+  .story-outlet { font-weight: 600; color: #555; letter-spacing: 0.02em; }
+  .story-editor { color: #aaa; }
+  .story-meta-empty { color: #ccc; }
+  .story-meta-display:hover .story-meta-empty { color: #999; }
+  .sm-input { font-family: 'Inter', sans-serif; font-size: 0.74rem; border: 1px solid #d0d0d0; border-radius: 3px; padding: 3px 7px; outline: none; width: 150px; }
+  .sm-input:focus { border-color: #1c1c1c; }
+
+  /* Contact details */
+  .contact-main { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .contact-details { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cd-pill { font-size: 0.7rem; color: #777; background: #fff; border: 1px solid #e2e2e2; border-radius: 3px; padding: 1px 7px; text-decoration: none; white-space: nowrap; }
+  a.cd-pill:hover { border-color: #1c1c1c; color: #1c1c1c; }
+  .contact-edit { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: #fafafa; border: 1px solid #e2e2e2; border-radius: 4px; }
+  .contact-edit input { font-family: 'Inter', sans-serif; font-size: 0.85rem; border: 1px solid #d0d0d0; border-radius: 3px; padding: 6px 9px; outline: none; color: #1c1c1c; }
+  .contact-edit input:focus { border-color: #1c1c1c; }
+  .contact-edit-actions { display: flex; gap: 6px; }
+
+  /* Toast */
+  #toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px);
+    background: #1c1c1c; color: #fff; padding: 11px 16px; border-radius: 6px;
+    display: flex; align-items: center; gap: 16px; font-size: 0.85rem;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.25); opacity: 0; pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s; z-index: 200; max-width: 90vw;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  .toast-msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toast-undo { background: none; border: none; color: #ffd95e; font-weight: 600; cursor: pointer; font-size: 0.85rem; font-family: 'Inter', sans-serif; flex-shrink: 0; }
+  .toast-undo:hover { text-decoration: underline; }
+
+  /* Trash */
+  #trashSection { margin-top: 28px; }
+  .trash-bar { display: flex; align-items: center; gap: 12px; }
+  .trash-toggle { background: none; border: none; color: #aaa; cursor: pointer; font-size: 0.78rem; font-family: 'Inter', sans-serif; padding: 4px 0; letter-spacing: 0.02em; }
+  .trash-toggle:hover { color: #555; }
+  .trash-empty { background: none; border: 1px solid #e2e2e2; color: #999; cursor: pointer; font-size: 0.72rem; padding: 3px 10px; border-radius: 3px; font-family: 'Inter', sans-serif; }
+  .trash-empty:hover { color: #c0392b; border-color: #f5c6c0; background: #fff0ee; }
+  .trash-list { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+  .trash-item { display: flex; align-items: center; gap: 10px; padding: 7px 12px; background: #fafafa; border: 1px solid #ececec; border-radius: 4px; font-size: 0.83rem; }
+  .trash-kind { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: #fff; background: #bbb; padding: 1px 6px; border-radius: 2px; flex-shrink: 0; }
+  .trash-label { flex: 1; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trash-ctx { font-size: 0.7rem; color: #bbb; white-space: nowrap; }
+  .trash-item .btn { padding: 3px 9px; font-size: 0.72rem; }
 </style>
 </head>
 <body>
@@ -346,6 +393,12 @@
   <div id="urgenciesSection"></div>
   <div class="story-list" id="storyList"></div>
   <p class="empty-state" id="emptyState" style="display:none">No stories yet — add one above.</p>
+  <div id="trashSection"></div>
+</div>
+
+<div id="toast">
+  <span class="toast-msg"></span>
+  <button class="toast-undo">Undo</button>
 </div>
 
 <script>
@@ -482,8 +535,14 @@
   const openNotes = new Set();
   const highlighted = new Set();
   let searchQuery = '';
+  let editingContactId = null;
+  let trash = JSON.parse(localStorage.getItem('storyTrash') || '[]');
+  let trashOpen = false;
+  function saveTrash() { localStorage.setItem('storyTrash', JSON.stringify(trash)); }
 
   function formatDate(iso) {
+    // Treat bare YYYY-MM-DD as local (not UTC) to avoid an off-by-one day
+    if (typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)) iso = iso + 'T00:00:00';
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
   function uid() { return Math.random().toString(36).slice(2, 10); }
@@ -552,9 +611,13 @@
   }
 
   function deleteStory(id) {
-    if (!confirm('Delete this story entirely?')) return;
-    stories = stories.filter(s => s.id !== id);
-    save(); render();
+    const idx = stories.findIndex(s => s.id === id);
+    if (idx < 0) return;
+    const [removed] = stories.splice(idx, 1);
+    const tid = uid();
+    trash.unshift({ tid, kind: 'story', label: removed.name, storyName: '', payload: removed, ctx: { index: idx }, deletedAt: new Date().toISOString() });
+    saveTrash(); save(); render();
+    showToast(`Deleted “${removed.name}”`, () => restoreFromTrash(tid));
   }
 
   // ── Contact ops ───────────────────────────────────────────────────────────
@@ -597,11 +660,16 @@
   }
 
   function deleteContact(storyId, contactId) {
-    if (!confirm('Delete this contact?')) return;
     const s = stories.find(s => s.id === storyId);
-    s.contacts = s.contacts.filter(c => c.id !== contactId);
+    if (!s) return;
+    const idx = s.contacts.findIndex(c => c.id === contactId);
+    if (idx < 0) return;
+    const [removed] = s.contacts.splice(idx, 1);
     openNotes.delete(contactId);
-    save(); render();
+    const tid = uid();
+    trash.unshift({ tid, kind: 'contact', label: removed.name, storyName: s.name, payload: removed, ctx: { storyId, index: idx }, deletedAt: new Date().toISOString() });
+    saveTrash(); save(); render();
+    showToast(`Deleted “${removed.name}”`, () => restoreFromTrash(tid));
   }
 
   // ── Notes ops ─────────────────────────────────────────────────────────────
@@ -660,6 +728,41 @@
     </div>`;
   }
 
+  // ── Story meta (outlet / editor) ──────────────────────────────────────────
+  function storyMetaHtml(s) {
+    const has = (s.outlet && s.outlet.length) || (s.editor && s.editor.length);
+    let inner;
+    if (has) {
+      const parts = [];
+      if (s.outlet) parts.push(`<span class="story-outlet">${hilite(s.outlet)}</span>`);
+      if (s.editor) parts.push(`<span class="story-editor">${hilite(s.editor)}</span>`);
+      inner = parts.join('<span class="story-editor"> · </span>');
+    } else {
+      inner = `<span class="story-meta-empty">+ Add outlet / editor</span>`;
+    }
+    return `<div class="story-meta" data-id="${s.id}"><span class="story-meta-display" onclick="editStoryMeta('${s.id}')">${inner}</span></div>`;
+  }
+
+  function editStoryMeta(id) {
+    const s = stories.find(s => s.id === id);
+    const div = document.querySelector(`.story-meta[data-id="${id}"]`);
+    if (!div) return;
+    const ke = `if(event.key==='Enter'){event.preventDefault();saveStoryMeta('${id}')}if(event.key==='Escape')render()`;
+    div.innerHTML = `
+      <input class="sm-input" id="sm-outlet-${id}" placeholder="Outlet" value="${esc(s.outlet||'')}" onkeydown="${ke}">
+      <input class="sm-input" id="sm-editor-${id}" placeholder="Editor" value="${esc(s.editor||'')}" onkeydown="${ke}">
+      <button class="btn btn-add" style="padding:3px 12px;font-size:0.72rem" onclick="saveStoryMeta('${id}')">Save</button>`;
+    const o = document.getElementById('sm-outlet-' + id);
+    o.focus(); o.select();
+  }
+
+  function saveStoryMeta(id) {
+    const s = stories.find(s => s.id === id);
+    s.outlet = document.getElementById('sm-outlet-' + id).value.trim();
+    s.editor = document.getElementById('sm-editor-' + id).value.trim();
+    save(); render();
+  }
+
   // ── Highlight ─────────────────────────────────────────────────────────────
   function toggleHighlight(e, id) {
     e.stopPropagation();
@@ -690,23 +793,27 @@
   }
 
   function editContact(storyId, contactId) {
+    editingContactId = contactId;
+    render();
+    const el = document.getElementById('ce-name-' + contactId);
+    if (el) { el.focus(); el.select(); }
+  }
+
+  function saveContactEdit(storyId, contactId) {
     const s = stories.find(s => s.id === storyId);
     const c = s.contacts.find(c => c.id === contactId);
-    const span = document.querySelector(`.contact-name[data-id="${contactId}"]`);
-    if (!span) return;
-    const input = document.createElement('input');
-    input.className = 'inline-edit-input';
-    input.style.fontSize = '0.9rem';
-    input.value = c.name;
-    span.replaceWith(input);
-    input.focus(); input.select();
-    function commit() {
-      const v = input.value.trim();
-      if (v) c.name = v;
-      save(); render();
-    }
-    input.addEventListener('blur', commit);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } if (e.key === 'Escape') render(); });
+    const name = document.getElementById('ce-name-' + contactId).value.trim();
+    if (name) c.name = name;
+    c.phone  = document.getElementById('ce-phone-' + contactId).value.trim();
+    c.email  = document.getElementById('ce-email-' + contactId).value.trim();
+    c.handle = document.getElementById('ce-handle-' + contactId).value.trim();
+    editingContactId = null;
+    save(); render();
+  }
+
+  function cancelContactEdit() {
+    editingContactId = null;
+    render();
   }
 
   function moveContact(storyId, contactId, dir) {
@@ -721,8 +828,15 @@
   function deleteNote(storyId, contactId, noteId) {
     const s = stories.find(s => s.id === storyId);
     const c = s.contacts.find(c => c.id === contactId);
-    c.notes = (c.notes || []).filter(n => n.id !== noteId);
-    save(); render();
+    const idx = (c.notes || []).findIndex(n => n.id === noteId);
+    if (idx < 0) return;
+    const [removed] = c.notes.splice(idx, 1);
+    openNotes.add(contactId);
+    const tid = uid();
+    const snippet = removed.text.length > 40 ? removed.text.slice(0, 40) + '…' : removed.text;
+    trash.unshift({ tid, kind: 'note', label: snippet, storyName: c.name + ' · ' + s.name, payload: removed, ctx: { storyId, contactId, index: idx }, deletedAt: new Date().toISOString() });
+    saveTrash(); save(); render();
+    showToast(`Deleted note`, () => restoreFromTrash(tid));
   }
 
   function editNote(storyId, contactId, noteId) {
@@ -746,6 +860,72 @@
     }
     ta.addEventListener('blur', commit);
     ta.addEventListener('keydown', e => { if (e.key === 'Escape') { render(); openNotes.add(contactId); render(); } });
+  }
+
+  // ── Trash & Undo ──────────────────────────────────────────────────────────
+  let toastTimer = null;
+  function showToast(msg, undoFn) {
+    const t = document.getElementById('toast');
+    t.querySelector('.toast-msg').textContent = msg;
+    const btn = t.querySelector('.toast-undo');
+    btn.onclick = () => { undoFn(); hideToast(); };
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 7000);
+  }
+  function hideToast() { document.getElementById('toast').classList.remove('show'); }
+
+  function restoreFromTrash(tid) {
+    const i = trash.findIndex(t => t.tid === tid);
+    if (i < 0) return;
+    const t = trash[i];
+    if (t.kind === 'story') {
+      stories.splice(Math.min(t.ctx.index, stories.length), 0, t.payload);
+    } else if (t.kind === 'contact') {
+      const s = stories.find(s => s.id === t.ctx.storyId);
+      if (!s) { alert('Can’t restore — its story was deleted. Restore the story first.'); return; }
+      s.contacts.splice(Math.min(t.ctx.index, s.contacts.length), 0, t.payload);
+    } else if (t.kind === 'note') {
+      const s = stories.find(s => s.id === t.ctx.storyId);
+      const c = s && s.contacts.find(c => c.id === t.ctx.contactId);
+      if (!c) { alert('Can’t restore — its contact was deleted. Restore the contact first.'); return; }
+      c.notes = c.notes || [];
+      c.notes.splice(Math.min(t.ctx.index, c.notes.length), 0, t.payload);
+      openNotes.add(c.id);
+    }
+    trash.splice(i, 1);
+    saveTrash(); save(); render();
+  }
+
+  function purgeTrash(tid) {
+    if (!confirm('Permanently delete this item? This cannot be undone.')) return;
+    trash = trash.filter(t => t.tid !== tid);
+    saveTrash(); render();
+  }
+
+  function emptyTrash() {
+    if (!confirm('Permanently empty the trash? This cannot be undone.')) return;
+    trash = [];
+    saveTrash(); render();
+  }
+
+  function renderTrash() {
+    const el = document.getElementById('trashSection');
+    if (!trash.length) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+      <div class="trash-bar">
+        <button class="trash-toggle" onclick="trashOpen=!trashOpen;render()">🗑 Trash (${trash.length}) ${trashOpen ? '▲' : '▼'}</button>
+        ${trashOpen ? `<button class="trash-empty" onclick="emptyTrash()">Empty trash</button>` : ''}
+      </div>
+      ${trashOpen ? `<div class="trash-list">${trash.map(t => `
+        <div class="trash-item">
+          <span class="trash-kind">${t.kind}</span>
+          <span class="trash-label">${esc(t.label)}</span>
+          ${t.storyName ? `<span class="trash-ctx">${esc(t.storyName)}</span>` : ''}
+          <button class="btn btn-complete" onclick="restoreFromTrash('${t.tid}')">Restore</button>
+          <button class="btn btn-delete" onclick="purgeTrash('${t.tid}')">Delete forever</button>
+        </div>`).join('')}</div>` : ''}
+    `;
   }
 
   // ── Drag & drop ───────────────────────────────────────────────────────────
@@ -861,10 +1041,11 @@
   function matchesSearch(s) {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    if (s.name.toLowerCase().includes(q)) return true;
+    const has = v => v && v.toLowerCase().includes(q);
+    if (has(s.name) || has(s.outlet) || has(s.editor)) return true;
     return (s.contacts || []).some(c =>
-      c.name.toLowerCase().includes(q) ||
-      (c.notes || []).some(n => n.text.toLowerCase().includes(q))
+      has(c.name) || has(c.phone) || has(c.email) || has(c.handle) ||
+      (c.notes || []).some(n => has(n.text))
     );
   }
 
@@ -940,12 +1121,37 @@
             </div>
           </div>` : '';
 
+        const detailParts = [];
+        if (c.phone)  detailParts.push(`<a class="cd-pill" href="tel:${esc(c.phone.replace(/[^\d+]/g,''))}">📞 ${hilite(c.phone)}</a>`);
+        if (c.email)  detailParts.push(`<a class="cd-pill" href="mailto:${esc(c.email)}">✉ ${hilite(c.email)}</a>`);
+        if (c.handle) detailParts.push(`<span class="cd-pill">@ ${hilite(c.handle)}</span>`);
+        const detailsHtml = detailParts.length ? `<div class="contact-details">${detailParts.join('')}</div>` : '';
+
+        if (editingContactId === c.id) {
+          const ke = `if(event.key==='Enter'){event.preventDefault();saveContactEdit('${s.id}','${c.id}')}if(event.key==='Escape')cancelContactEdit()`;
+          return `
+            <div class="contact-wrapper" data-contact-id="${c.id}" data-story-id="${s.id}">
+              <div class="contact-edit">
+                <input id="ce-name-${c.id}" value="${esc(c.name)}" placeholder="Name" onkeydown="${ke}">
+                <input id="ce-phone-${c.id}" value="${esc(c.phone||'')}" placeholder="Phone" onkeydown="${ke}">
+                <input id="ce-email-${c.id}" value="${esc(c.email||'')}" placeholder="Email" onkeydown="${ke}">
+                <input id="ce-handle-${c.id}" value="${esc(c.handle||'')}" placeholder="Signal / handle" onkeydown="${ke}">
+                <div class="contact-edit-actions">
+                  <button class="btn btn-add" style="padding:6px 16px;font-size:0.8rem" onclick="saveContactEdit('${s.id}','${c.id}')">Save</button>
+                  <button class="btn btn-complete" onclick="cancelContactEdit()">Cancel</button>
+                </div>
+              </div>
+            </div>`;
+        }
+
         return `
           <div class="contact-wrapper" draggable="true" data-contact-id="${c.id}" data-story-id="${s.id}">
             <div class="contact-item ${notesOpen ? '' : 'no-notes'} ${c.urgent ? 'urgent' : ''} ${c.completed ? 'completed' : ''} ${highlighted.has(c.id) ? 'highlighted' : ''}">
               <span class="drag-handle" title="Drag to reorder">⠿</span>
-              <span class="contact-name ${c.completed ? 'crossed' : ''}" data-id="${c.id}" ondblclick="toggleHighlight(event,'${c.id}')">${hilite(c.name)}</span>
-              <span class="contact-date">${formatDate(c.date)}</span>
+              <div class="contact-main">
+                <span class="contact-name ${c.completed ? 'crossed' : ''}" data-id="${c.id}" ondblclick="toggleHighlight(event,'${c.id}')">${hilite(c.name)}</span>
+                ${detailsHtml}
+              </div>
               <div class="contact-actions">
                 ${dateBtn(c.dateContacted||'', 'Contacted', `setContactDateContacted('${s.id}','${c.id}',this.value)`, c.id)}
                 <button class="btn-move" onclick="moveContact('${s.id}','${c.id}',-1)" title="Move up">▲</button>
@@ -975,6 +1181,7 @@
               </div>
               <span class="story-date">Added ${formatDate(s.date)}</span>
             </div>
+            ${storyMetaHtml(s)}
             <div class="story-actions">
               ${dateBtn(s.deadline||'', 'Deadline', `setStoryDeadline('${s.id}',this.value)`, s.id)}
               <button class="btn btn-edit" onclick="editStory('${s.id}')">Edit</button>
@@ -1000,6 +1207,7 @@
     }).join('');
 
     attachDrag();
+    renderTrash();
   }
 
   document.getElementById('newStoryInput')
