@@ -1150,7 +1150,7 @@
             <div class="contact-item ${notesOpen ? '' : 'no-notes'} ${c.urgent ? 'urgent' : ''} ${c.completed ? 'completed' : ''} ${highlighted.has(c.id) ? 'highlighted' : ''}">
               <span class="drag-handle" title="Drag to reorder">⠿</span>
               <div class="contact-main">
-                <span class="contact-name ${c.completed ? 'crossed' : ''}" data-id="${c.id}" ondblclick="toggleHighlight(event,'${c.id}')" onmousedown="event.stopPropagation()" draggable="false" title="${esc(c.name)}">${hilite(c.name)}</span>
+                <span class="contact-name ${c.completed ? 'crossed' : ''}" data-id="${c.id}" ondblclick="toggleHighlight(event,'${c.id}')" onmousedown="event.stopPropagation()" ondragstart="event.stopPropagation(); event.preventDefault();" draggable="false" title="${esc(c.name)}">${hilite(c.name)}</span>
                 ${detailsHtml}
               </div>
               <div class="contact-actions">
