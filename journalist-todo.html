@@ -157,14 +157,15 @@
     background: #fafafa;
     border: 1px solid #e8e8e8;
     border-radius: 4px;
-    padding: 7px 10px; flex-wrap: wrap;
+    padding: 7px 10px;
     transition: background 0.1s;
+    overflow: hidden;
   }
   .contact-item:hover { background: #f5f5f5; }
   .contact-item.no-notes { border-radius: 4px; }
   .contact-item.urgent { border-left: 2px solid #c0392b; }
   .contact-item.completed { opacity: 0.78; }
-  .contact-name { font-size: 0.875rem; color: #333; }
+  .contact-name { font-size: 0.875rem; color: #333; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .contact-name.crossed { text-decoration: line-through; color: #aaa; }
   .contact-date { display: none; }
   .contact-actions { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
