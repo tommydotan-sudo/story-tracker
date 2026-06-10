@@ -713,7 +713,7 @@
   function dateBtn(value, label, onchangeStr, uid) {
     const today = new Date(); today.setHours(0,0,0,0);
     let cls = 'date-btn';
-    let btnLabel = '📅 ' + label;
+    let btnLabel = '📅';
     if (value) {
       const d = new Date(value + 'T00:00:00');
       const diff = Math.round((d - today) / 86400000);
