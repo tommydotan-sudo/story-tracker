@@ -936,7 +936,7 @@
   function attachDrag() {
     document.querySelectorAll('.story-card[data-story-id]').forEach(card => {
       card.draggable = false;
-      const handle = card.querySelector(':scope > .drag-handle');
+      const handle = card.querySelector('.drag-handle');
       if (handle) {
         handle.addEventListener('mousedown', () => { card.draggable = true; });
         handle.addEventListener('mouseleave', () => { if (!dragSrc) card.draggable = false; });
