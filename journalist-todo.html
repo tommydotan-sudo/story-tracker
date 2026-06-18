@@ -769,7 +769,7 @@
 
   // ── Highlight ─────────────────────────────────────────────────────────────
   function scrollToItem(id, contactId) {
-    if (contactId && !openNotes.has(contactId)) {
+    if (id !== contactId && contactId && !openNotes.has(contactId)) {
       openNotes.add(contactId);
       render();
     }
