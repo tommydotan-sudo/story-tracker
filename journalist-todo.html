@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Story Tracker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✍️</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -176,7 +177,7 @@
   .note-item { display: flex; gap: 8px; align-items: flex-start; background: #fff; border: 1px solid #e8e8e8; border-radius: 3px; padding: 8px 10px; }
   .note-item.drag-over { outline: 1px dashed #aaa; outline-offset: -1px; background: #f5f5f5; }
   .note-item.highlighted { background: #fffdf0 !important; border-color: #e8c84a !important; }
-  .note-text { flex: 1; font-size: 0.8375rem; color: #444; line-height: 1.6; white-space: pre-wrap; word-break: break-word; cursor: default; }
+  .note-text { flex: 1; font-size: 0.8375rem; color: #444; line-height: 1.6; white-space: pre-wrap; word-break: break-word; cursor: text; user-select: text; }
   .note-date { font-size: 0.67rem; color: #bbb; white-space: nowrap; margin-top: 2px; letter-spacing: 0.02em; }
   .note-delete { background: transparent; border: none; color: #ccc; cursor: pointer; font-size: 0.75rem; padding: 0 2px; flex-shrink: 0; }
   .note-delete:hover { color: #c0392b; }
@@ -973,6 +974,12 @@
     });
 
     document.querySelectorAll('.note-item[data-note-id]').forEach(item => {
+      item.draggable = false;
+      const handle = item.querySelector('.drag-handle');
+      if (handle) {
+        handle.addEventListener('mousedown', () => { item.draggable = true; });
+        handle.addEventListener('mouseleave', () => { if (!dragSrc) item.draggable = false; });
+      }
       item.addEventListener('dragstart', e => {
         e.stopPropagation();
         dragSrc = { type: 'note', storyId: item.dataset.storyId, contactId: item.dataset.contactId, noteId: item.dataset.noteId };
@@ -980,6 +987,7 @@
         item.style.opacity = '0.5';
       });
       item.addEventListener('dragend', () => {
+        item.draggable = false;
         item.style.opacity = '';
         document.querySelectorAll('.note-item.drag-over').forEach(el => el.classList.remove('drag-over'));
       });
@@ -1121,7 +1129,7 @@
         const notesPanel = notesOpen ? `
           <div class="notes-panel">
             ${notes.length ? `<div class="notes-list">${notes.map(n => `
-              <div class="note-item ${highlighted.has(n.id) ? 'highlighted' : ''}" draggable="true" data-note-id="${n.id}" data-contact-id="${c.id}" data-story-id="${s.id}" ondblclick="toggleHighlight(event,'${n.id}')">
+              <div class="note-item ${highlighted.has(n.id) ? 'highlighted' : ''}" data-note-id="${n.id}" data-contact-id="${c.id}" data-story-id="${s.id}" ondblclick="toggleHighlight(event,'${n.id}')">
                 <span class="drag-handle" style="font-size:0.85rem;margin-top:2px" title="Drag to reorder">⠿</span>
                 <div style="flex:1">
                   <div class="note-text" data-id="${n.id}">${hilite(n.text)}</div>
