@@ -534,7 +534,7 @@
   // ── Data ──────────────────────────────────────────────────────────────────
   let stories = JSON.parse(localStorage.getItem('storyTracker') || '[]');
   const openNotes = new Set();
-  const highlighted = new Set();
+  const highlighted = new Set(JSON.parse(localStorage.getItem('storyHighlighted') || '[]'));
   let searchQuery = '';
   let editingContactId = null;
   let trash = JSON.parse(localStorage.getItem('storyTrash') || '[]');
@@ -770,6 +770,7 @@
     if (e.target.closest('button,input,textarea')) return;
     if (highlighted.has(id)) highlighted.delete(id);
     else highlighted.add(id);
+    localStorage.setItem('storyHighlighted', JSON.stringify([...highlighted]));
     render();
   }
 
@@ -999,6 +1000,12 @@
     });
 
     document.querySelectorAll('.contact-wrapper[data-contact-id]').forEach(wrapper => {
+      wrapper.draggable = false;
+      const handle = wrapper.querySelector('.drag-handle');
+      if (handle) {
+        handle.addEventListener('mousedown', () => { wrapper.draggable = true; });
+        handle.addEventListener('mouseleave', () => { if (!dragSrc) wrapper.draggable = false; });
+      }
       wrapper.addEventListener('dragstart', e => {
         e.stopPropagation();
         dragSrc = { type: 'contact', storyId: wrapper.dataset.storyId, contactId: wrapper.dataset.contactId };
@@ -1006,6 +1013,7 @@
         wrapper.style.opacity = '0.5';
       });
       wrapper.addEventListener('dragend', () => {
+        wrapper.draggable = false;
         wrapper.style.opacity = '';
         document.querySelectorAll('.contact-wrapper.drag-over').forEach(el => el.classList.remove('drag-over'));
       });
@@ -1084,7 +1092,7 @@
                 ${u.type === 'note' ? '<span style="font-size:0.65rem;color:#aaa;margin-right:4px;flex-shrink:0">NOTE</span>' : ''}
                 <span class="urgency-name">${esc(u.label)}</span>
                 <span class="urgency-story">${esc(u.sublabel)}</span>
-                <button class="urgency-unhighlight" onclick="highlighted.delete('${u.id}');render()" title="Remove">✕</button>
+                <button class="urgency-unhighlight" onclick="highlighted.delete('${u.id}');localStorage.setItem('storyHighlighted',JSON.stringify([...highlighted]));render()" title="Remove">✕</button>
               </div>`).join('')}
           </div>
         </div>`;
@@ -1150,7 +1158,7 @@
             <div class="contact-item ${notesOpen ? '' : 'no-notes'} ${c.urgent ? 'urgent' : ''} ${c.completed ? 'completed' : ''} ${highlighted.has(c.id) ? 'highlighted' : ''}">
               <span class="drag-handle" title="Drag to reorder">⠿</span>
               <div class="contact-main">
-                <span class="contact-name ${c.completed ? 'crossed' : ''}" data-id="${c.id}" ondblclick="toggleHighlight(event,'${c.id}')" onmousedown="event.stopPropagation()" ondragstart="event.stopPropagation(); event.preventDefault();" draggable="false" title="${esc(c.name)}">${hilite(c.name)}</span>
+                <span class="contact-name ${c.completed ? 'crossed' : ''}" data-id="${c.id}" ondblclick="toggleHighlight(event,'${c.id}')" title="${esc(c.name)}">${hilite(c.name)}</span>
                 ${detailsHtml}
               </div>
               <div class="contact-actions">
