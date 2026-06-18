@@ -1120,11 +1120,10 @@
 
       const contactsHtml = contacts.map(c => {
         const notes = c.notes || [];
-        if (searchQuery) {
-          const q = searchQuery.toLowerCase();
-          if (notes.some(n => n.text && n.text.toLowerCase().includes(q))) openNotes.add(c.id);
-        }
-        const notesOpen = openNotes.has(c.id);
+        const searchExpandNotes = searchQuery
+          ? notes.some(n => n.text && n.text.toLowerCase().includes(searchQuery.toLowerCase()))
+          : false;
+        const notesOpen = openNotes.has(c.id) || searchExpandNotes;
 
         const notesPanel = notesOpen ? `
           <div class="notes-panel">
