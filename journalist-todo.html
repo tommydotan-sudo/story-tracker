@@ -261,7 +261,7 @@
     text-transform: uppercase; color: #888;
   }
   .urgencies-count {
-    background: #e8c84a; color: #7a5f00;
+    background: #c0392b; color: #fff;
     font-size: 0.65rem; font-weight: 700;
     padding: 1px 7px; border-radius: 10px;
     letter-spacing: 0.04em;
@@ -270,8 +270,8 @@
   .urgency-item {
     display: flex; align-items: center; gap: 10px;
     padding: 7px 10px;
-    background: #fffdf0;
-    border: 1px solid #e8c84a;
+    background: #fff5f5;
+    border: 1px solid #e8a0a0;
     border-radius: 4px;
     font-size: 0.875rem;
   }
@@ -769,7 +769,7 @@
 
   // ── Highlight ─────────────────────────────────────────────────────────────
   function scrollToItem(id, contactId) {
-    if (id !== contactId && contactId && !openNotes.has(contactId)) {
+    if (id !== contactId) {
       openNotes.add(contactId);
       render();
     }
