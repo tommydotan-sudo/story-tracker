@@ -1236,13 +1236,13 @@
             </div>
           </div>
           <div class="contacts-section">
-            ${contacts.length ? `<div class="contact-list">${contactsHtml}</div>` : ''}
             <button class="btn btn-add-contact" onclick="showAddContact('${s.id}')">+ Add</button>
             <div class="add-contact-form" id="contact-form-${s.id}" style="display:none">
               <input type="text" id="contact-input-${s.id}" placeholder="Contact name…"
                 onkeydown="if(event.key==='Enter') addContact('${s.id}')" />
               <button class="btn btn-add" style="padding:7px 14px;font-size:0.85rem" onclick="addContact('${s.id}')">Add</button>
             </div>
+            ${contacts.length ? `<div class="contact-list">${contactsHtml}</div>` : ''}
           </div>
         </div>`;
     }).join('');
