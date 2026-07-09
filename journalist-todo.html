@@ -1124,7 +1124,7 @@
           </div>
           <div class="urgency-list" id="urgencyList">
             ${sortedUrgencies.map(u => `
-              <div class="urgency-item" draggable="true" data-uid="${u.id}">
+              <div class="urgency-item" data-uid="${u.id}">
                 <span class="drag-handle" style="font-size:0.85rem;color:#ccc;cursor:grab;margin-right:4px">⠿</span>
                 ${u.type === 'note' ? '<span style="font-size:0.65rem;color:#aaa;margin-right:4px;flex-shrink:0">NOTE</span>' : ''}
                 <span class="urgency-name" style="cursor:pointer" onclick="scrollToItem('${u.id}','${u.contactId}')">${esc(u.label)}</span>
@@ -1136,12 +1136,18 @@
       // attach drag to urgency items
       let urgDragSrc = null;
       urgSec.querySelectorAll('.urgency-item').forEach(item => {
+        item.draggable = false;
+        const handle = item.querySelector('.drag-handle');
+        if (handle) {
+          handle.addEventListener('mousedown', () => { item.draggable = true; });
+          handle.addEventListener('mouseleave', () => { if (!urgDragSrc) item.draggable = false; });
+        }
         item.addEventListener('dragstart', e => {
           urgDragSrc = item.dataset.uid;
           e.dataTransfer.effectAllowed = 'move';
           item.style.opacity = '0.5';
         });
-        item.addEventListener('dragend', () => { item.style.opacity = ''; urgDragSrc = null; });
+        item.addEventListener('dragend', () => { item.draggable = false; item.style.opacity = ''; urgDragSrc = null; });
         item.addEventListener('dragover', e => {
           if (!urgDragSrc || urgDragSrc === item.dataset.uid) return;
           e.preventDefault();
