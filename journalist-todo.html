@@ -1130,13 +1130,20 @@
     }
 
     list.innerHTML = visibleStories.map(s => {
-      const contacts = s.contacts || [];
+      const allContacts = s.contacts || [];
+      const q = searchQuery.toLowerCase();
+      const contacts = searchQuery ? allContacts.filter(c => {
+        const has = v => v && v.toLowerCase().includes(q);
+        return has(c.name) || has(c.phone) || has(c.email) || has(c.handle) ||
+          (c.notes || []).some(n => has(n.text));
+      }) : allContacts;
 
       const contactsHtml = contacts.map(c => {
-        const notes = c.notes || [];
-        const searchExpandNotes = searchQuery
-          ? notes.some(n => n.text && n.text.toLowerCase().includes(searchQuery.toLowerCase()))
-          : false;
+        const allNotes = c.notes || [];
+        const notes = searchQuery
+          ? allNotes.filter(n => n.text && n.text.toLowerCase().includes(q))
+          : allNotes;
+        const searchExpandNotes = searchQuery && notes.length > 0;
         const notesOpen = openNotes.has(c.id) || searchExpandNotes;
 
         const notesPanel = notesOpen ? `
