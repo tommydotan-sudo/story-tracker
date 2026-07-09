@@ -538,6 +538,7 @@
   let stories = JSON.parse(localStorage.getItem('storyTracker') || '[]');
   const openNotes = new Set();
   const highlighted = new Set(JSON.parse(localStorage.getItem('storyHighlighted') || '[]'));
+  let urgencyOrder = JSON.parse(localStorage.getItem('storyUrgencyOrder') || '[]');
   let searchQuery = '';
   let editingContactId = null;
   let trash = JSON.parse(localStorage.getItem('storyTrash') || '[]');
@@ -1107,17 +1108,24 @@
         });
       });
     });
+    // apply saved order, append any new items at end
+    urgencyOrder = urgencyOrder.filter(id => urgencyItems.some(u => u.id === id));
+    urgencyItems.forEach(u => { if (!urgencyOrder.includes(u.id)) urgencyOrder.push(u.id); });
+    localStorage.setItem('storyUrgencyOrder', JSON.stringify(urgencyOrder));
+    const sortedUrgencies = [...urgencyOrder].map(id => urgencyItems.find(u => u.id === id)).filter(Boolean);
+
     const urgSec = document.getElementById('urgenciesSection');
-    if (urgencyItems.length) {
+    if (sortedUrgencies.length) {
       urgSec.innerHTML = `
         <div class="urgencies-section">
           <div class="urgencies-header">
             <span class="urgencies-title">Urgencies</span>
-            <span class="urgencies-count">${urgencyItems.length}</span>
+            <span class="urgencies-count">${sortedUrgencies.length}</span>
           </div>
-          <div class="urgency-list">
-            ${urgencyItems.map(u => `
-              <div class="urgency-item">
+          <div class="urgency-list" id="urgencyList">
+            ${sortedUrgencies.map(u => `
+              <div class="urgency-item" draggable="true" data-uid="${u.id}">
+                <span class="drag-handle" style="font-size:0.85rem;color:#ccc;cursor:grab;margin-right:4px">⠿</span>
                 ${u.type === 'note' ? '<span style="font-size:0.65rem;color:#aaa;margin-right:4px;flex-shrink:0">NOTE</span>' : ''}
                 <span class="urgency-name" style="cursor:pointer" onclick="scrollToItem('${u.id}','${u.contactId}')">${esc(u.label)}</span>
                 <span class="urgency-story">${esc(u.sublabel)}</span>
@@ -1125,6 +1133,33 @@
               </div>`).join('')}
           </div>
         </div>`;
+      // attach drag to urgency items
+      let urgDragSrc = null;
+      urgSec.querySelectorAll('.urgency-item').forEach(item => {
+        item.addEventListener('dragstart', e => {
+          urgDragSrc = item.dataset.uid;
+          e.dataTransfer.effectAllowed = 'move';
+          item.style.opacity = '0.5';
+        });
+        item.addEventListener('dragend', () => { item.style.opacity = ''; urgDragSrc = null; });
+        item.addEventListener('dragover', e => {
+          if (!urgDragSrc || urgDragSrc === item.dataset.uid) return;
+          e.preventDefault();
+          item.style.outline = '2px dashed #e8a0a0';
+        });
+        item.addEventListener('dragleave', () => { item.style.outline = ''; });
+        item.addEventListener('drop', e => {
+          e.preventDefault(); item.style.outline = '';
+          if (!urgDragSrc || urgDragSrc === item.dataset.uid) return;
+          const fromIdx = urgencyOrder.indexOf(urgDragSrc);
+          const toIdx = urgencyOrder.indexOf(item.dataset.uid);
+          if (fromIdx === -1 || toIdx === -1) return;
+          urgencyOrder.splice(fromIdx, 1);
+          urgencyOrder.splice(toIdx, 0, urgDragSrc);
+          localStorage.setItem('storyUrgencyOrder', JSON.stringify(urgencyOrder));
+          render();
+        });
+      });
     } else {
       urgSec.innerHTML = '';
     }
